@@ -6,16 +6,13 @@
 using namespace antlr4;
 using namespace std;
 
+void initThreads() {
+    std::thread([]{}).join(); 
+}
+
 int main(int argc, const char* argv[]) {
 
-    std::vector<std::thread> threads;
-    for (int i = 0; i < 4; ++i) {
-        threads.emplace_back([] {
-            std::cout << "Thread running!\n";
-        });
-    }
-    for (auto& t : threads) t.join();
-
+    initThreads();
 
     const char* filepath = argv[1];
     std::ifstream ifs;
