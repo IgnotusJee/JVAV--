@@ -11,4 +11,8 @@ public:
 
     // Returns a string representation of the AST node
     virtual std::string toString() const = 0;
+
+    ASTNode* getself() {
+        return this;
+    }
 };

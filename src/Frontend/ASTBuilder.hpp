@@ -1,15 +1,25 @@
-#include "ASTCollection.h"
+#include "AST/ASTCollection.h"
 #include "JvavParserBaseVisitor.h"
 #include "JvavParser.h"
 
 #include<vector>
 
 template <typename T>
-T safeAnyCast(const std::any a) {
+T safeAnyCast(const std::any &a) {
     std::cout << a.type().name() << '\n';
     std::cout << typeid(T).name() << '\n';
-    std::cout << (typeid(T).name() == a.type().name() ? "yes" : "no") << '\n';
-    return std::any_cast<T>(a);
+    std::cout << (typeid(T).name() == a.type().name() ? "yes" : "no") << "\n\n";
+    if(std::string(typeid(T).name()) == "P11funcDefNode") {
+        std::cout << "1\n";
+    }
+    ASTNode* ptr;
+    try {
+        ptr = std::any_cast<ASTNode*>(a);
+    }
+    catch(...) {
+        std::cout << "Bad cast of " << typeid(T).name() << std::endl;
+    }
+    return dynamic_cast<T>(ptr);
 }
 
 class ASTBuilder : public JvavParserBaseVisitor {
@@ -28,13 +38,16 @@ class ASTBuilder : public JvavParserBaseVisitor {
             } 
             else if (auto funcDef = dynamic_cast<JvavParser::Func_defContext*>(Def)) {
                 DefNodes.push_back(safeAnyCast<funcDefNode*>(visit(funcDef)));
+                std::cout << "2\n";
             } 
             else if (auto classDef = dynamic_cast<JvavParser::Class_defContext*>(Def)) {
                 DefNodes.push_back(safeAnyCast<classDefNode*>(visit(classDef)));
             }
         }
 
-        return new rootNode(DefNodes);
+        std::cout << "3\n";
+
+        return dynamic_cast<ASTNode*>(new rootNode(DefNodes));
     }
 
     std::any visitFunc_def(JvavParser::Func_defContext *ctx) override {
@@ -64,7 +77,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
 
         auto suite = safeAnyCast<blockStmtNode*>(visit(ctx->suite()));
 
-        return new funcDefNode(type, name, paramNodes, suite);
+        return dynamic_cast<ASTNode*>(new funcDefNode(type, name, paramNodes, suite));
     }
 
     std::any visitClass_def(JvavParser::Class_defContext *ctx) override {
@@ -92,14 +105,14 @@ class ASTBuilder : public JvavParserBaseVisitor {
             }
             funcDefNodes.push_back(safeAnyCast<funcDefNode*>(visit(constructStmt)));
         }
-        return new classDefNode(name, varDefNodes, funcDefNodes);
+        return dynamic_cast<ASTNode*>(new classDefNode(name, varDefNodes, funcDefNodes));
     }
 
     std::any visitConstruct_stmt(JvavParser::Construct_stmtContext *ctx) override {
         typeNode *type = new typeNode(NullType);
         std::string name = ctx->Identifier()->getText();
         blockStmtNode *suite = safeAnyCast<blockStmtNode*>(visit(ctx->suite()));
-        return new funcDefNode(type, name, {}, suite);
+        return dynamic_cast<ASTNode*>(new funcDefNode(type, name, {}, suite));
     }
 
     std::any visitVar_def(JvavParser::Var_defContext *ctx) override {
@@ -110,7 +123,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
                 vars.push_back(safeAnyCast<varNode*>(visit(varStmt)));
             }
         }
-        return new varDefNode(type, vars);
+        return dynamic_cast<ASTNode*>(new varDefNode(type, vars));
     }
 
     std::any visitVar_stmt(JvavParser::Var_stmtContext *ctx) override {
@@ -119,7 +132,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
         if (ctx->expression() != nullptr) {
             init = safeAnyCast<ExprNode*>(visit(ctx->expression()));
         }
-        return new varNode(name, init);
+        return dynamic_cast<ASTNode*>(new varNode(name, init));
     }
 
     std::any visitSuite(JvavParser::SuiteContext *ctx) override {
@@ -129,7 +142,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
                 stmts.push_back(safeAnyCast<StmtNode*>(visit(stmt)));
             }
         }
-        return new blockStmtNode(stmts);
+        return dynamic_cast<ASTNode*>(new blockStmtNode(stmts));
     }
 
     std::any visitBranch_stmt(JvavParser::Branch_stmtContext *ctx) override {
@@ -145,7 +158,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
                 stmts.push_back(safeAnyCast<StmtNode*>(visit(stmt)));
             }
         }
-        return new branchStmtNode(exprs, stmts);
+        return dynamic_cast<ASTNode*>(new branchStmtNode(exprs, stmts));
     }
 
     std::any visitBlock(JvavParser::BlockContext *ctx) override {
@@ -154,7 +167,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
 
     std::any visitVarDefStmt(JvavParser::VarDefStmtContext *ctx) override {
         varDefNode *varDef = safeAnyCast<varDefNode*>(visit(ctx->var_def()));
-        return new varDefStmtNode(varDef->typeName, varDef->var);
+        return dynamic_cast<ASTNode*>(new varDefStmtNode(varDef->typeName, varDef->var));
     }
 
     std::any visitBranchStmt(JvavParser::BranchStmtContext *ctx) override {
@@ -173,7 +186,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
     std::any visitWhile_stmt(JvavParser::While_stmtContext *ctx) override {
         ExprNode *cond = safeAnyCast<ExprNode*>(visit(ctx->expression()));
         StmtNode *stmt = safeAnyCast<StmtNode*>(visit(ctx->stmt()));
-        return new whileStmtNode(cond, stmt);
+        return dynamic_cast<ASTNode*>(new whileStmtNode(cond, stmt));
     }
 
     std::any visitFor_stmt(JvavParser::For_stmtContext *ctx) override {
@@ -188,14 +201,14 @@ class ASTBuilder : public JvavParserBaseVisitor {
         StmtNode *stmt = safeAnyCast<StmtNode*>(visit(ctx->stmt()));
         if (ctx->var_def() != nullptr) {
             varDefStmtNode *init = new varDefStmtNode(safeAnyCast<varDefNode*>(visit(ctx->var_def())));
-            return new forDefStmtNode(init, cond, step, stmt);
+            return dynamic_cast<ASTNode*>(new forDefStmtNode(init, cond, step, stmt));
         } 
         else {
             ExprNode *init = nullptr;
             if (ctx->init != nullptr) {
                 init = safeAnyCast<ExprNode*>(visit(ctx->init));
             }
-            return new forExprStmtNode(init, cond, step, stmt);
+            return dynamic_cast<ASTNode*>(new forExprStmtNode(init, cond, step, stmt));
         }
     }
 
@@ -220,15 +233,15 @@ class ASTBuilder : public JvavParserBaseVisitor {
         if (ctx->expression() != nullptr) {
             ret = safeAnyCast<ExprNode*>(visit(ctx->expression()));
         }
-        return new returnStmtNode(ret);
+        return dynamic_cast<ASTNode*>(new returnStmtNode(ret));
     }
 
     std::any visitBreak_stmt(JvavParser::Break_stmtContext *ctx) override {
-        return new breakStmtNode();
+        return dynamic_cast<ASTNode*>(new breakStmtNode());
     }
 
     std::any visitContinue_stmt(JvavParser::Continue_stmtContext *ctx) override {
-        return new continueStmtNode();
+        return dynamic_cast<ASTNode*>(new continueStmtNode());
     }
 
     std::any visitFlowStmt(JvavParser::FlowStmtContext *ctx) override {
@@ -242,7 +255,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
                 exprs.push_back(safeAnyCast<ExprNode*>(visit(Expr)));
             }
         }
-        return new exprStmtNode(exprs);
+        return dynamic_cast<ASTNode*>(new exprStmtNode(exprs));
     }
 
     std::any visitExprStmt(JvavParser::ExprStmtContext *ctx) override {
@@ -255,20 +268,20 @@ class ASTBuilder : public JvavParserBaseVisitor {
 
     std::any visitConst_expr(JvavParser::Const_exprContext *ctx) override {
         if (ctx->True() != nullptr) {
-            return new boolNode(true);
+            return dynamic_cast<ASTNode*>(new boolNode(true));
         } 
         else if (ctx->False() != nullptr) {
-            return new boolNode(false);
+            return dynamic_cast<ASTNode*>(new boolNode(false));
         } 
         else if (ctx->Number() != nullptr) {
-            return new numberNode(stoll(ctx->Number()->getText()));
+            return dynamic_cast<ASTNode*>(new numberNode(stoll(ctx->Number()->getText())));
         } 
         else if (ctx->Str() != nullptr) {
             std::string str = ctx->Str()->getText().substr(1, ctx->Str()->getText().length() - 1);
-            return new strNode(str);
+            return dynamic_cast<ASTNode*>(new strNode(str));
         } 
         else {
-            return new nullNode();
+            return dynamic_cast<ASTNode*>(new nullNode());
         }
     }
 
@@ -278,11 +291,11 @@ class ASTBuilder : public JvavParserBaseVisitor {
 
     std::any visitVarExpr(JvavParser::VarExprContext *ctx) override {
         std::string name = ctx->Identifier()->getText();
-        return new varExprNode(name);
+        return dynamic_cast<ASTNode*>(new varExprNode(name));
     }
 
     std::any visitThisExpr(JvavParser::ThisExprContext *ctx) override {
-        return new thisExprNode();
+        return dynamic_cast<ASTNode*>(new thisExprNode());
     }
 
     std::any visitFunc_expr(JvavParser::Func_exprContext *ctx) override {
@@ -296,7 +309,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
                 }
             }
         }
-        return new funcExprNode(args, name);
+        return dynamic_cast<ASTNode*>(new funcExprNode(args, name));
     }
 
     std::any visitFuncExpr(JvavParser::FuncExprContext *ctx) override {
@@ -307,11 +320,11 @@ class ASTBuilder : public JvavParserBaseVisitor {
         ExprNode *expr = safeAnyCast<ExprNode*>(visit(ctx->expression(0)));
         ASTNode *member = safeAnyCast<ASTNode*>(visit(ctx->expression(1)));
         if (auto func = dynamic_cast<funcExprNode*>(member)) {
-            return new memberFuncExprNode(expr, func);
+            return dynamic_cast<ASTNode*>(new memberFuncExprNode(expr, func));
         } 
         else if (auto var = dynamic_cast<varExprNode*>(member)) {
             std::string name = var->name;
-            return new memberVarExprNode(expr, name);
+            return dynamic_cast<ASTNode*>(new memberVarExprNode(expr, name));
         } else {
             throw std::runtime_error("Member type wrong");
         }
@@ -320,7 +333,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
     std::any visitArrayExpr(JvavParser::ArrayExprContext *ctx) override {
         ExprNode *name = safeAnyCast<ExprNode*>(visit(ctx->expression(0)));
         ExprNode *index = safeAnyCast<ExprNode*>(visit(ctx->expression(1)));
-        return new arrayExprNode(name, index);
+        return dynamic_cast<ASTNode*>(new arrayExprNode(name, index));
     }
 
     std::any visitNewvar_expr(JvavParser::Newvar_exprContext *ctx) override {
@@ -332,7 +345,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
             }
         }
         int dim = ctx->Lbracket().size();
-        return new newExprNode(type, exprs, dim);
+        return dynamic_cast<ASTNode*>(new newExprNode(type, exprs, dim));
     }
 
     std::any visitNew_expr(JvavParser::New_exprContext *ctx) override {
@@ -360,7 +373,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
         else {
             throw std::runtime_error("Wrong Suffix Unary Opcode");
         }
-        return new suffixUnaryExprNode(expr, opCode);
+        return dynamic_cast<ASTNode*>(new suffixUnaryExprNode(expr, opCode));
     }
 
     std::any visitPrefixUnaryExpr(JvavParser::PrefixUnaryExprContext *ctx) override {
@@ -375,7 +388,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
         else if(Op == "-") opCode = prefixUnaryExprNode::prefixOpType::Sub;
         else throw std::runtime_error("Wrong Prefix Unary Opcode");
 
-        return new prefixUnaryExprNode(expr, opCode);
+        return dynamic_cast<ASTNode*>(new prefixUnaryExprNode(expr, opCode));
     }
 
     std::any visitBinaryExpr(JvavParser::BinaryExprContext *ctx) override {
@@ -404,20 +417,20 @@ class ASTBuilder : public JvavParserBaseVisitor {
         else if (Op == "||") opCode = binaryExprNode::binaryOpType::Or;
         else throw std::runtime_error("Wrong Binary Unary Opcode");
 
-        return new binaryExprNode(lhs, rhs, opCode);
+        return dynamic_cast<ASTNode*>(new binaryExprNode(lhs, rhs, opCode));
     }
 
     std::any visitTernaryExpr(JvavParser::TernaryExprContext *ctx) override {
         ExprNode *cond = safeAnyCast<ExprNode*>(visit(ctx->expression(0)));
         ExprNode *thenExpr = safeAnyCast<ExprNode*>(visit(ctx->expression(1)));
         ExprNode *elseExpr = safeAnyCast<ExprNode*>(visit(ctx->expression(2)));
-        return new ternaryExprNode(cond, thenExpr, elseExpr);
+        return dynamic_cast<ASTNode*>(new ternaryExprNode(cond, thenExpr, elseExpr));
     }
 
     std::any visitAssignExpr(JvavParser::AssignExprContext *ctx) override {
         ExprNode *lhs = safeAnyCast<ExprNode*>(visit(ctx->expression(0)));
         ExprNode *rhs = safeAnyCast<ExprNode*>(visit(ctx->expression(1)));
-        return new assignExprNode(lhs, rhs);
+        return dynamic_cast<ASTNode*>(new assignExprNode(lhs, rhs));
     }
 
     std::any visitTypename(JvavParser::TypenameContext *ctx) override {
@@ -428,23 +441,23 @@ class ASTBuilder : public JvavParserBaseVisitor {
             auto elemType = (safeAnyCast<typeNode*>(visit(ctx->basic_type())))->type;
             int dim = ctx->Lbracket().size();
             arrayType *ArrayType = new arrayType(elemType, dim);
-            return new typeNode(ArrayType);
+            return dynamic_cast<ASTNode*>(new typeNode(ArrayType));
         }
     }
 
     std::any visitBasic_type(JvavParser::Basic_typeContext *ctx) override {
         if (ctx->Bool() != nullptr) {
-            return new typeNode(BoolType);
+            return dynamic_cast<ASTNode*>(new typeNode(BoolType));
         } 
         else if (ctx->Int() != nullptr) {
-            return new typeNode(IntType);
+            return dynamic_cast<ASTNode*>(new typeNode(IntType));
         } 
         else if (ctx->String() != nullptr) {
-            return new typeNode(StringType);
+            return dynamic_cast<ASTNode*>(new typeNode(StringType));
         } 
         else {
             auto ClassType = new classType(ctx->Identifier()->getText());
-            return new typeNode(ClassType);
+            return dynamic_cast<ASTNode*>(new typeNode(ClassType));
         }
     }
 
