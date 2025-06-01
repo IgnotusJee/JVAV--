@@ -329,7 +329,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
 
     std::any visitNew_expr(JvavParser::New_exprContext *ctx) override {
         if (ctx->newerror_expr() != nullptr) {
-            throw "New array expression wrong";
+            throw std::runtime_error("New array expression wrong");
         } else {
             return visit(ctx->newvar_expr());
         }
