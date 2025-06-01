@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(jvav_parser)
+project(jvav_compiler)
 
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
 set(CMAKE_CXX_STANDARD 17)
@@ -9,8 +9,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Include directories
 include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/antlr4-cpp-runtime/src
-    ${PROJECT_SOURCE_DIR}/src/
     ${PROJECT_SOURCE_DIR}/src/antlr
+    ${PROJECT_SOURCE_DIR}/src/AST
+    ${PROJECT_SOURCE_DIR}/src/Frontend
 )
 
 # Find pthread / threads
@@ -39,7 +40,7 @@ set(src_dir
     ${PROJECT_SOURCE_DIR}/src/antlr/JvavParserBaseVisitor.cpp
 )
 
-add_executable(jvav_parser ${src_dir} src/main.cpp)
+add_executable(jvav_compiler ${src_dir} src/main.cpp)
 
 # Link antlr4 runtime and pthread
-target_link_libraries(jvav_parser PRIVATE antlr4-cpp-runtime Threads::Threads)
+target_link_libraries(jvav_compiler PRIVATE antlr4-cpp-runtime Threads::Threads)

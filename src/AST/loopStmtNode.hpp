@@ -3,6 +3,7 @@
 #include<vector>
 #include<string>
 #include "StmtNode.hpp"
+#include "ASTVisitor.h"
 
 class loopStmtNode : public StmtNode{
 public:

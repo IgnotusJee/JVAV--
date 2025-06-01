@@ -3,6 +3,7 @@
 #include<vector>
 #include<string>
 #include "ExprNode.hpp"
+#include "ASTVisitor.h"
 
 class suffixUnaryExprNode : public ExprNode{
 public:
@@ -17,7 +18,7 @@ public:
     suffixUnaryExprNode(ExprNode *expr, suffixOpType opCode) : expr(expr), opCode(opCode) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

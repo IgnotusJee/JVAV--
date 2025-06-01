@@ -4,6 +4,7 @@
 #include<string>
 #include "ExprNode.hpp"
 #include "StmtNode.hpp"
+#include "ASTVisitor.h"
 
 class exprStmtNode : public StmtNode{
 public:
@@ -12,7 +13,7 @@ public:
     exprStmtNode(std::vector<ExprNode*> expr) : expr(expr) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include<string>
+#include "ASTVisitor.h"
 #include "ExprNode.hpp"
 
 class arrayExprNode : public ExprNode{
@@ -14,7 +15,7 @@ public:
     }
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

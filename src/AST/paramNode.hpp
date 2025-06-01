@@ -4,6 +4,7 @@
 #include<string>
 #include "ASTNode.hpp"
 #include "typeNode.hpp"
+#include "ASTVisitor.h"
 
 class paramNode : public ASTNode{
 public:
@@ -13,7 +14,7 @@ public:
     paramNode(typeNode *typeName, std::string &name) : typeName(typeName), name(name) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

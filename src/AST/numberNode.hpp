@@ -2,6 +2,7 @@
 
 #include<vector>
 #include<string>
+#include "ASTVisitor.h"
 #include "constExprNode.hpp"
 
 class numberNode : public constExprNode{
@@ -11,7 +12,7 @@ public:
     numberNode(long long val) : val(val) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

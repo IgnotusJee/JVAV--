@@ -4,6 +4,7 @@
 #include<string>
 #include "ExprNode.hpp"
 #include "ASTNode.hpp"
+#include "ASTVisitor.h"
 
 class varNode : public ASTNode{
 public:
@@ -13,7 +14,7 @@ public:
     varNode(std::string &name, ExprNode *init) : name(name), init(init) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

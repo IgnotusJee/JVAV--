@@ -1,103 +1,75 @@
-#include "rootNode.hpp"
-#include "varDefNode.hpp"
-#include "classDefNode.hpp"
-#include "funcDefNode.hpp"
-#include "varNode.hpp"
-#include "paramNode.hpp"
-#include "varDefStmtNode.hpp"
-#include "blockStmtNode.hpp"
-#include "branchStmtNode.hpp"
-#include "exprStmtNode.hpp"
-#include "whileStmtNode.hpp"
-#include "forDefStmtNode.hpp"
-#include "forExprStmtNode.hpp"
-#include "returnStmtNode.hpp"
-#include "breakStmtNode.hpp"
-#include "continueStmtNode.hpp"
-#include "varExprNode.hpp"
-#include "thisExprNode.hpp"
-#include "funcExprNode.hpp"
-#include "memberVarExprNode.hpp"
-#include "memberFuncExprNode.hpp"
-#include "arrayExprNode.hpp"
-#include "newExprNode.hpp"
-#include "prefixUnaryExprNode.hpp"
-#include "suffixUnaryExprNode.hpp"
-#include "binaryExprNode.hpp"
-#include "ternaryExprNode.hpp"
-#include "arrayExprNode.hpp"
-#include "assignExprNode.hpp"
-#include "boolNode.hpp"
-#include "numberNode.hpp"
-#include "strNode.hpp"
-#include "nullNode.hpp"
-#include "typeNode.hpp"
+#pragma once
 
+class rootNode;
+class varDefNode;
+class classDefNode;
+class funcDefNode;
+class varNode;
+class paramNode;
+class varDefStmtNode;
+class blockStmtNode;
+class branchStmtNode;
+class exprStmtNode;
+class whileStmtNode;
+class forDefStmtNode;
+class forExprStmtNode;
+class returnStmtNode;
+class breakStmtNode;
+class continueStmtNode;
+class varExprNode;
+class thisExprNode;
+class funcExprNode;
+class memberVarExprNode;
+class memberFuncExprNode;
+class arrayExprNode;
+class newExprNode;
+class prefixUnaryExprNode;
+class suffixUnaryExprNode;
+class binaryExprNode;
+class ternaryExprNode;
+class assignExprNode;
+class boolNode;
+class numberNode;
+class strNode;
+class nullNode;
+class typeNode;
+
+// 访问者接口
 class ASTVisitor {
 public:
-    void visit(rootNode it);
+    virtual ~ASTVisitor() = default;  // 虚析构函数确保多态删除安全
 
-    void visit(varDefNode it);
-
-    void visit(classDefNode it);
-
-    void visit(funcDefNode it);
-
-    void visit(varNode it);
-
-    void visit(paramNode it);
-
-    void visit(varDefStmtNode it);
-
-    void visit(blockStmtNode it);
-
-    void visit(branchStmtNode it);
-
-    void visit(exprStmtNode it);
-
-    void visit(whileStmtNode it);
-
-    void visit(forDefStmtNode it);
-
-    void visit(forExprStmtNode it);
-
-    void visit(returnStmtNode it);
-
-    void visit(breakStmtNode it);
-
-    void visit(continueStmtNode it);
-
-    void visit(varExprNode it);
-
-    void visit(thisExprNode it);
-
-    void visit(funcExprNode it);
-
-    void visit(memberVarExprNode it);
-
-    void visit(memberFuncExprNode it);
-
-    void visit(arrayExprNode it);
-
-    void visit(newExprNode it);
-
-    void visit(prefixUnaryExprNode it);
-
-    void visit(suffixUnaryExprNode it);
-
-    void visit(binaryExprNode it);
-
-    void visit(ternaryExprNode it);
-
-    void visit(assignExprNode it);
-
-    void visit(boolNode it);
-
-    void visit(numberNode it);
-
-    void visit(strNode it);
-
-    void visit(nullNode it);
-
-    void visit(typeNode it);
+    virtual void visit(rootNode *it) = 0;
+    virtual void visit(varDefNode *it) = 0;
+    virtual void visit(classDefNode *it) = 0;
+    virtual void visit(funcDefNode *it) = 0;
+    virtual void visit(varNode *it) = 0;
+    virtual void visit(paramNode *it) = 0;
+    virtual void visit(varDefStmtNode *it) = 0;
+    virtual void visit(blockStmtNode *it) = 0;
+    virtual void visit(branchStmtNode *it) = 0;
+    virtual void visit(exprStmtNode *it) = 0;
+    virtual void visit(whileStmtNode *it) = 0;
+    virtual void visit(forDefStmtNode *it) = 0;
+    virtual void visit(forExprStmtNode *it) = 0;
+    virtual void visit(returnStmtNode *it) = 0;
+    virtual void visit(breakStmtNode *it) = 0;
+    virtual void visit(continueStmtNode *it) = 0;
+    virtual void visit(varExprNode *it) = 0;
+    virtual void visit(thisExprNode *it) = 0;
+    virtual void visit(funcExprNode *it) = 0;
+    virtual void visit(memberVarExprNode *it) = 0;
+    virtual void visit(memberFuncExprNode *it) = 0;
+    virtual void visit(arrayExprNode *it) = 0;
+    virtual void visit(newExprNode *it) = 0;
+    virtual void visit(prefixUnaryExprNode *it) = 0;
+    virtual void visit(suffixUnaryExprNode *it) = 0;
+    virtual void visit(binaryExprNode *it) = 0;
+    virtual void visit(ternaryExprNode *it) = 0;
+    virtual void visit(assignExprNode *it) = 0;
+    virtual void visit(boolNode *it) = 0;
+    virtual void visit(numberNode *it) = 0;
+    virtual void visit(strNode *it) = 0;
+    virtual void visit(nullNode *it) = 0;
+    virtual void visit(typeNode *it) = 0;
 };

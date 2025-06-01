@@ -5,6 +5,7 @@
 #include "ExprNode.hpp"
 #include "StmtNode.hpp"
 #include "loopStmtNode.hpp"
+#include "ASTVisitor.h"
 
 class whileStmtNode : public loopStmtNode{
 public:
@@ -14,7 +15,7 @@ public:
     whileStmtNode(ExprNode *cond, StmtNode *stmt) : cond(cond), stmt(stmt) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

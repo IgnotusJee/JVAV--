@@ -6,8 +6,6 @@
 class ASTNode {
 public:
 
-    ASTNode() {}
-
     // Accepts a visitor to perform operations on this AST node
     virtual void accept(ASTVisitor &visitor) = 0;
 

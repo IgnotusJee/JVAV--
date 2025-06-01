@@ -2,6 +2,7 @@
 
 #include<string>
 #include "constExprNode.hpp"
+#include "ASTVisitor.h"
 
 class boolNode : public constExprNode{
 public:
@@ -10,7 +11,7 @@ public:
     boolNode(bool val) : val(val) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

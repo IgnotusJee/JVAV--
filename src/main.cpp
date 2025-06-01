@@ -3,6 +3,7 @@
 #include <vector>
 #include "JvavLexer.h"
 #include "JvavParser.h"
+#include "Frontend/ASTBuilder.hpp"
 using namespace antlr4;
 using namespace std;
 
@@ -21,13 +22,10 @@ int main(int argc, const char* argv[]) {
     JvavLexer lexer(&input);
     CommonTokenStream tokens(&lexer);
     JvavParser parser(&tokens);
-    // for (auto t : tokens.getTokens()) {
-    //     cout<<t->toString()<<endl;
-    // }
-    // ifs.close();
-
-    tree::ParseTree* tree = parser.program();
-    std::cout << tree->toStringTree(&parser) << std::endl;
+    tree::ParseTree* parseTreeRoot = parser.program();
+    cout << parseTreeRoot->toStringTree(&parser) << endl;
+    ASTBuilder astBuilder;
+    rootNode *ASTRoot = std::any_cast<rootNode*>(astBuilder.visit(parseTreeRoot));
 
     return 0;
 }

@@ -2,6 +2,7 @@
 
 #include<string>
 #include "ASTNode.hpp"
+#include "ASTVisitor.h"
 #include "Type/Type.hpp"
 
 class ExprNode : public ASTNode{

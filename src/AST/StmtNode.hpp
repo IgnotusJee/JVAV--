@@ -2,6 +2,7 @@
 
 #include<string>
 #include "ASTNode.hpp"
+#include "ASTVisitor.h"
 
 class StmtNode : public ASTNode{
 public:

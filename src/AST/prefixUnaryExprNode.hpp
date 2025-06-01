@@ -3,6 +3,7 @@
 #include<vector>
 #include<string>
 #include "ExprNode.hpp"
+#include "ASTVisitor.h"
 
 class prefixUnaryExprNode : public ExprNode{
 public:
@@ -19,7 +20,7 @@ public:
     }
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

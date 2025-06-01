@@ -4,6 +4,7 @@
 #include<string>
 #include "flowStmtNode.hpp"
 #include "ExprNode.hpp"
+#include "ASTVisitor.h"
 
 class returnStmtNode : public flowStmtNode{
 public:
@@ -12,7 +13,7 @@ public:
     returnStmtNode(ExprNode *ret) : ret(ret) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

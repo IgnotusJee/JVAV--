@@ -3,6 +3,7 @@
 #include<vector>
 #include<string>
 #include"defNode.hpp"
+#include "ASTVisitor.h"
 
 class rootNode : public ASTNode{
 public:
@@ -11,7 +12,7 @@ public:
     rootNode(std::vector<defNode*> Def) : Def(Def) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

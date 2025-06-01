@@ -5,6 +5,7 @@
 #include "defNode.hpp"
 #include "varDefNode.hpp"
 #include "funcDefNode.hpp"
+#include "ASTVisitor.h"
 
 class classDefNode : public defNode{
 public:
@@ -15,7 +16,7 @@ public:
     classDefNode(std::string &name, std::vector<varDefNode*> varDef, std::vector<funcDefNode*> funcDef) : name(name), varDef(varDef), funcDef(funcDef) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

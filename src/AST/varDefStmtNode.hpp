@@ -5,6 +5,7 @@
 #include "StmtNode.hpp"
 #include "varNode.hpp"
 #include "typeNode.hpp"
+#include "ASTVisitor.h"
 
 class varDefStmtNode : public StmtNode{
 public:
@@ -16,7 +17,7 @@ public:
     varDefStmtNode(varDefNode *Var) : typeName(Var->typeName), var(Var->var) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

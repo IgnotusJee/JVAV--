@@ -3,6 +3,7 @@
 #include<vector>
 #include<string>
 #include "flowStmtNode.hpp"
+#include "ASTVisitor.h"
 
 class continueStmtNode : public flowStmtNode{
 public:
@@ -10,7 +11,7 @@ public:
     continueStmtNode() {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

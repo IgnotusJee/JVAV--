@@ -3,6 +3,7 @@
 #include<vector>
 #include<string>
 #include "ExprNode.hpp"
+#include "ASTVisitor.h"
 
 class binaryExprNode : public ExprNode{
 public:
@@ -20,7 +21,7 @@ public:
     binaryExprNode(ExprNode *lhs, ExprNode *rhs, binaryOpType opCode) : lhs(lhs), rhs(rhs), opCode(opCode) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

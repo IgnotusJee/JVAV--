@@ -3,6 +3,7 @@
 #include<vector>
 #include<string>
 #include "ExprNode.hpp"
+#include "ASTVisitor.h"
 
 class thisExprNode : public ExprNode{
 public:
@@ -10,7 +11,7 @@ public:
     thisExprNode() {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

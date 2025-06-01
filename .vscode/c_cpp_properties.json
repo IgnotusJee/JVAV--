@@ -5,6 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/src",
                 "${workspaceFolder}/src/antlr",
+                "${workspaceFolder}/src/AST",
+                "${workspaceFolder}/src/Frontend",
                 "${workspaceFolder}/third_party/antlr4-cpp-runtime/src"
             ],
             "defines": [],

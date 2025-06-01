@@ -6,6 +6,7 @@
 #include "paramNode.hpp"
 #include "blockStmtNode.hpp"
 #include "defNode.hpp"
+#include "ASTVisitor.h"
 
 class funcDefNode : public defNode{
 public:
@@ -18,7 +19,7 @@ public:
                 typeName(typeName), name(name), param(param), suite(suite) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {

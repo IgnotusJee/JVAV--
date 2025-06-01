@@ -6,6 +6,7 @@
 #include "varDefStmtNode.hpp"
 #include "ExprNode.hpp"
 #include "StmtNode.hpp"
+#include "ASTVisitor.h"
 
 class forDefStmtNode : public loopStmtNode{
 public:
@@ -17,7 +18,7 @@ public:
     forDefStmtNode(varDefStmtNode *varDef, ExprNode *cond, ExprNode *step, StmtNode *stmt) : varDef(varDef), cond(cond), step(step), stmt(stmt) {}
 
     void accept(ASTVisitor &visitor) override {
-        visitor.visit(*this);
+        visitor.visit(this);
     }
 
     std::string toString() const override {
