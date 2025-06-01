@@ -4,15 +4,16 @@
 #include<string>
 #include "ExprNode.hpp"
 
-enum class binaryOpType {
-    Mul, Div, Mod, Add, Sub,
-    Lshift, Rshift, Le, Ge, Leq, Geq,
-    Eq, Neq, Bitand, Bitxor, Bitor,
-    And, Or
-};
-
 class binaryExprNode : public ExprNode{
 public:
+
+    enum class binaryOpType {
+        Mul, Div, Mod, Add, Sub,
+        Lshift, Rshift, Le, Ge, Leq, Geq,
+        Eq, Neq, Bitand, Bitxor, Bitor,
+        And, Or
+    };
+
     ExprNode *lhs, *rhs;
     binaryOpType opCode;
 

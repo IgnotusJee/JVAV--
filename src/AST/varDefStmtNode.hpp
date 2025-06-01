@@ -13,6 +13,8 @@ public:
 
     varDefStmtNode(typeNode *typeName, std::vector<varNode*> var) : typeName(typeName), var(var) {}
 
+    varDefStmtNode(varDefNode *Var) : typeName(Var->typeName), var(Var->var) {}
+
     void accept(ASTVisitor &visitor) override {
         visitor.visit(*this);
     }

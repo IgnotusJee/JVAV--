@@ -4,12 +4,13 @@
 #include<string>
 #include "ExprNode.hpp"
 
-enum class suffixOpType {
-    Inc, Dec
-};
-
 class suffixUnaryExprNode : public ExprNode{
 public:
+
+    enum class suffixOpType {
+        Inc, Dec
+    };
+
     ExprNode *expr;
     suffixOpType opCode;
 

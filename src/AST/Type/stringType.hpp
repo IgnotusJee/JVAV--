@@ -2,15 +2,15 @@
 
 #include "Type.hpp"
 
-class nullType : public Type {
+class stringType : public Type {
 public:
-    nullType() : Type("null") {}
+    stringType() : Type("null") {}
 
     bool equal(const Type &other) const override {
         return other.typeName == "null";
     }
 
     std::string toString() const override {
-        return "null";
+        return "stringType";
     }
 };

@@ -10,7 +10,7 @@ public:
     std::string name;
     std::vector<ExprNode*> args;
 
-    funcExprNode(std::string &name, std::vector<ExprNode*> args) : name(name), args(args) {}
+    funcExprNode(std::vector<ExprNode*> args, std::string &name) : name(name), args(args) {}
 
     void accept(ASTVisitor &visitor) override {
         visitor.visit(*this);
