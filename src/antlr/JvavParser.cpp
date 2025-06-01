@@ -2,7 +2,6 @@
 // Generated from ./JvavParser.g4 by ANTLR 4.13.2
 
 
-#include "JvavParserListener.h"
 #include "JvavParserVisitor.h"
 
 #include "JvavParser.h"
@@ -297,18 +296,6 @@ size_t JvavParser::ProgramContext::getRuleIndex() const {
   return JvavParser::RuleProgram;
 }
 
-void JvavParser::ProgramContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterProgram(this);
-}
-
-void JvavParser::ProgramContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitProgram(this);
-}
-
 
 std::any JvavParser::ProgramContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -414,18 +401,6 @@ JvavParser::TypedargslistContext* JvavParser::Func_defContext::typedargslist() {
 
 size_t JvavParser::Func_defContext::getRuleIndex() const {
   return JvavParser::RuleFunc_def;
-}
-
-void JvavParser::Func_defContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterFunc_def(this);
-}
-
-void JvavParser::Func_defContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitFunc_def(this);
 }
 
 
@@ -534,18 +509,6 @@ size_t JvavParser::TypedargslistContext::getRuleIndex() const {
   return JvavParser::RuleTypedargslist;
 }
 
-void JvavParser::TypedargslistContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterTypedargslist(this);
-}
-
-void JvavParser::TypedargslistContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitTypedargslist(this);
-}
-
 
 std::any JvavParser::TypedargslistContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -624,18 +587,6 @@ size_t JvavParser::ArgslistContext::getRuleIndex() const {
   return JvavParser::RuleArgslist;
 }
 
-void JvavParser::ArgslistContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterArgslist(this);
-}
-
-void JvavParser::ArgslistContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitArgslist(this);
-}
-
 
 std::any JvavParser::ArgslistContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -708,18 +659,6 @@ tree::TerminalNode* JvavParser::Class_defContext::Semicolon() {
 
 size_t JvavParser::Class_defContext::getRuleIndex() const {
   return JvavParser::RuleClass_def;
-}
-
-void JvavParser::Class_defContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterClass_def(this);
-}
-
-void JvavParser::Class_defContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitClass_def(this);
 }
 
 
@@ -803,18 +742,6 @@ JvavParser::Construct_stmtContext* JvavParser::Class_suiteContext::construct_stm
 
 size_t JvavParser::Class_suiteContext::getRuleIndex() const {
   return JvavParser::RuleClass_suite;
-}
-
-void JvavParser::Class_suiteContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterClass_suite(this);
-}
-
-void JvavParser::Class_suiteContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitClass_suite(this);
 }
 
 
@@ -914,18 +841,6 @@ size_t JvavParser::Construct_stmtContext::getRuleIndex() const {
   return JvavParser::RuleConstruct_stmt;
 }
 
-void JvavParser::Construct_stmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterConstruct_stmt(this);
-}
-
-void JvavParser::Construct_stmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitConstruct_stmt(this);
-}
-
 
 std::any JvavParser::Construct_stmtContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -999,18 +914,6 @@ tree::TerminalNode* JvavParser::Var_defContext::Comma(size_t i) {
 
 size_t JvavParser::Var_defContext::getRuleIndex() const {
   return JvavParser::RuleVar_def;
-}
-
-void JvavParser::Var_defContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterVar_def(this);
-}
-
-void JvavParser::Var_defContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitVar_def(this);
 }
 
 
@@ -1087,18 +990,6 @@ size_t JvavParser::Var_stmtContext::getRuleIndex() const {
   return JvavParser::RuleVar_stmt;
 }
 
-void JvavParser::Var_stmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterVar_stmt(this);
-}
-
-void JvavParser::Var_stmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitVar_stmt(this);
-}
-
 
 std::any JvavParser::Var_stmtContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -1169,18 +1060,6 @@ JvavParser::StmtContext* JvavParser::SuiteContext::stmt(size_t i) {
 
 size_t JvavParser::SuiteContext::getRuleIndex() const {
   return JvavParser::RuleSuite;
-}
-
-void JvavParser::SuiteContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterSuite(this);
-}
-
-void JvavParser::SuiteContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitSuite(this);
 }
 
 
@@ -1254,16 +1133,6 @@ JvavParser::Flow_stmtContext* JvavParser::FlowStmtContext::flow_stmt() {
 
 JvavParser::FlowStmtContext::FlowStmtContext(StmtContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::FlowStmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterFlowStmt(this);
-}
-void JvavParser::FlowStmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitFlowStmt(this);
-}
 
 std::any JvavParser::FlowStmtContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -1279,16 +1148,6 @@ JvavParser::Var_defContext* JvavParser::VarDefStmtContext::var_def() {
 
 JvavParser::VarDefStmtContext::VarDefStmtContext(StmtContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::VarDefStmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterVarDefStmt(this);
-}
-void JvavParser::VarDefStmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitVarDefStmt(this);
-}
 
 std::any JvavParser::VarDefStmtContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -1304,16 +1163,6 @@ JvavParser::Loop_stmtContext* JvavParser::LoopStmtContext::loop_stmt() {
 
 JvavParser::LoopStmtContext::LoopStmtContext(StmtContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::LoopStmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterLoopStmt(this);
-}
-void JvavParser::LoopStmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitLoopStmt(this);
-}
 
 std::any JvavParser::LoopStmtContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -1329,16 +1178,6 @@ JvavParser::Expr_stmtContext* JvavParser::ExprStmtContext::expr_stmt() {
 
 JvavParser::ExprStmtContext::ExprStmtContext(StmtContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::ExprStmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterExprStmt(this);
-}
-void JvavParser::ExprStmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitExprStmt(this);
-}
 
 std::any JvavParser::ExprStmtContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -1354,16 +1193,6 @@ JvavParser::SuiteContext* JvavParser::BlockContext::suite() {
 
 JvavParser::BlockContext::BlockContext(StmtContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::BlockContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterBlock(this);
-}
-void JvavParser::BlockContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitBlock(this);
-}
 
 std::any JvavParser::BlockContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -1379,16 +1208,6 @@ JvavParser::Branch_stmtContext* JvavParser::BranchStmtContext::branch_stmt() {
 
 JvavParser::BranchStmtContext::BranchStmtContext(StmtContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::BranchStmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterBranchStmt(this);
-}
-void JvavParser::BranchStmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitBranchStmt(this);
-}
 
 std::any JvavParser::BranchStmtContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -1532,18 +1351,6 @@ size_t JvavParser::Branch_stmtContext::getRuleIndex() const {
   return JvavParser::RuleBranch_stmt;
 }
 
-void JvavParser::Branch_stmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterBranch_stmt(this);
-}
-
-void JvavParser::Branch_stmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitBranch_stmt(this);
-}
-
 
 std::any JvavParser::Branch_stmtContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -1643,18 +1450,6 @@ size_t JvavParser::Loop_stmtContext::getRuleIndex() const {
   return JvavParser::RuleLoop_stmt;
 }
 
-void JvavParser::Loop_stmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterLoop_stmt(this);
-}
-
-void JvavParser::Loop_stmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitLoop_stmt(this);
-}
-
 
 std::any JvavParser::Loop_stmtContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -1735,18 +1530,6 @@ JvavParser::StmtContext* JvavParser::While_stmtContext::stmt() {
 
 size_t JvavParser::While_stmtContext::getRuleIndex() const {
   return JvavParser::RuleWhile_stmt;
-}
-
-void JvavParser::While_stmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterWhile_stmt(this);
-}
-
-void JvavParser::While_stmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitWhile_stmt(this);
 }
 
 
@@ -1836,18 +1619,6 @@ JvavParser::ExpressionContext* JvavParser::For_stmtContext::expression(size_t i)
 
 size_t JvavParser::For_stmtContext::getRuleIndex() const {
   return JvavParser::RuleFor_stmt;
-}
-
-void JvavParser::For_stmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterFor_stmt(this);
-}
-
-void JvavParser::For_stmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitFor_stmt(this);
 }
 
 
@@ -1961,18 +1732,6 @@ size_t JvavParser::Flow_stmtContext::getRuleIndex() const {
   return JvavParser::RuleFlow_stmt;
 }
 
-void JvavParser::Flow_stmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterFlow_stmt(this);
-}
-
-void JvavParser::Flow_stmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitFlow_stmt(this);
-}
-
 
 std::any JvavParser::Flow_stmtContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2054,18 +1813,6 @@ size_t JvavParser::Return_stmtContext::getRuleIndex() const {
   return JvavParser::RuleReturn_stmt;
 }
 
-void JvavParser::Return_stmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterReturn_stmt(this);
-}
-
-void JvavParser::Return_stmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitReturn_stmt(this);
-}
-
 
 std::any JvavParser::Return_stmtContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2131,18 +1878,6 @@ size_t JvavParser::Break_stmtContext::getRuleIndex() const {
   return JvavParser::RuleBreak_stmt;
 }
 
-void JvavParser::Break_stmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterBreak_stmt(this);
-}
-
-void JvavParser::Break_stmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitBreak_stmt(this);
-}
-
 
 std::any JvavParser::Break_stmtContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2196,18 +1931,6 @@ tree::TerminalNode* JvavParser::Continue_stmtContext::Semicolon() {
 
 size_t JvavParser::Continue_stmtContext::getRuleIndex() const {
   return JvavParser::RuleContinue_stmt;
-}
-
-void JvavParser::Continue_stmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterContinue_stmt(this);
-}
-
-void JvavParser::Continue_stmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitContinue_stmt(this);
 }
 
 
@@ -2275,18 +1998,6 @@ tree::TerminalNode* JvavParser::Expr_stmtContext::Comma(size_t i) {
 
 size_t JvavParser::Expr_stmtContext::getRuleIndex() const {
   return JvavParser::RuleExpr_stmt;
-}
-
-void JvavParser::Expr_stmtContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterExpr_stmt(this);
-}
-
-void JvavParser::Expr_stmtContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitExpr_stmt(this);
 }
 
 
@@ -2368,16 +2079,6 @@ JvavParser::New_exprContext* JvavParser::NewExprContext::new_expr() {
 
 JvavParser::NewExprContext::NewExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::NewExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterNewExpr(this);
-}
-void JvavParser::NewExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitNewExpr(this);
-}
 
 std::any JvavParser::NewExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2393,16 +2094,6 @@ tree::TerminalNode* JvavParser::ThisExprContext::This() {
 
 JvavParser::ThisExprContext::ThisExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::ThisExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterThisExpr(this);
-}
-void JvavParser::ThisExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitThisExpr(this);
-}
 
 std::any JvavParser::ThisExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2418,16 +2109,6 @@ JvavParser::Func_exprContext* JvavParser::FuncExprContext::func_expr() {
 
 JvavParser::FuncExprContext::FuncExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::FuncExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterFuncExpr(this);
-}
-void JvavParser::FuncExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitFuncExpr(this);
-}
 
 std::any JvavParser::FuncExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2455,16 +2136,6 @@ tree::TerminalNode* JvavParser::ArrayExprContext::Rbracket() {
 
 JvavParser::ArrayExprContext::ArrayExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::ArrayExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterArrayExpr(this);
-}
-void JvavParser::ArrayExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitArrayExpr(this);
-}
 
 std::any JvavParser::ArrayExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2488,16 +2159,6 @@ tree::TerminalNode* JvavParser::MemberExprContext::Dot() {
 
 JvavParser::MemberExprContext::MemberExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::MemberExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterMemberExpr(this);
-}
-void JvavParser::MemberExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitMemberExpr(this);
-}
 
 std::any JvavParser::MemberExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2589,16 +2250,6 @@ tree::TerminalNode* JvavParser::BinaryExprContext::Or() {
 
 JvavParser::BinaryExprContext::BinaryExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::BinaryExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterBinaryExpr(this);
-}
-void JvavParser::BinaryExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitBinaryExpr(this);
-}
 
 std::any JvavParser::BinaryExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2634,16 +2285,6 @@ tree::TerminalNode* JvavParser::PrefixUnaryExprContext::Sub() {
 
 JvavParser::PrefixUnaryExprContext::PrefixUnaryExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::PrefixUnaryExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterPrefixUnaryExpr(this);
-}
-void JvavParser::PrefixUnaryExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitPrefixUnaryExpr(this);
-}
 
 std::any JvavParser::PrefixUnaryExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2659,16 +2300,6 @@ tree::TerminalNode* JvavParser::VarExprContext::Identifier() {
 
 JvavParser::VarExprContext::VarExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::VarExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterVarExpr(this);
-}
-void JvavParser::VarExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitVarExpr(this);
-}
 
 std::any JvavParser::VarExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2696,16 +2327,6 @@ tree::TerminalNode* JvavParser::TernaryExprContext::Colon() {
 
 JvavParser::TernaryExprContext::TernaryExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::TernaryExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterTernaryExpr(this);
-}
-void JvavParser::TernaryExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitTernaryExpr(this);
-}
 
 std::any JvavParser::TernaryExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2729,16 +2350,6 @@ tree::TerminalNode* JvavParser::PureExprContext::Rparenthesis() {
 
 JvavParser::PureExprContext::PureExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::PureExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterPureExpr(this);
-}
-void JvavParser::PureExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitPureExpr(this);
-}
 
 std::any JvavParser::PureExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2762,16 +2373,6 @@ tree::TerminalNode* JvavParser::AssignExprContext::Assign() {
 
 JvavParser::AssignExprContext::AssignExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::AssignExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterAssignExpr(this);
-}
-void JvavParser::AssignExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitAssignExpr(this);
-}
 
 std::any JvavParser::AssignExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2795,16 +2396,6 @@ tree::TerminalNode* JvavParser::SuffixUnaryExprContext::Decrement() {
 
 JvavParser::SuffixUnaryExprContext::SuffixUnaryExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::SuffixUnaryExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterSuffixUnaryExpr(this);
-}
-void JvavParser::SuffixUnaryExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitSuffixUnaryExpr(this);
-}
 
 std::any JvavParser::SuffixUnaryExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -2820,16 +2411,6 @@ JvavParser::Const_exprContext* JvavParser::ConstExprContext::const_expr() {
 
 JvavParser::ConstExprContext::ConstExprContext(ExpressionContext *ctx) { copyFrom(ctx); }
 
-void JvavParser::ConstExprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterConstExpr(this);
-}
-void JvavParser::ConstExprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitConstExpr(this);
-}
 
 std::any JvavParser::ConstExprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -3301,18 +2882,6 @@ size_t JvavParser::Const_exprContext::getRuleIndex() const {
   return JvavParser::RuleConst_expr;
 }
 
-void JvavParser::Const_exprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterConst_expr(this);
-}
-
-void JvavParser::Const_exprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitConst_expr(this);
-}
-
 
 std::any JvavParser::Const_exprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -3383,18 +2952,6 @@ size_t JvavParser::Func_exprContext::getRuleIndex() const {
   return JvavParser::RuleFunc_expr;
 }
 
-void JvavParser::Func_exprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterFunc_expr(this);
-}
-
-void JvavParser::Func_exprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitFunc_expr(this);
-}
-
 
 std::any JvavParser::Func_exprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -3460,18 +3017,6 @@ JvavParser::Newvar_exprContext* JvavParser::New_exprContext::newvar_expr() {
 
 size_t JvavParser::New_exprContext::getRuleIndex() const {
   return JvavParser::RuleNew_expr;
-}
-
-void JvavParser::New_exprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterNew_expr(this);
-}
-
-void JvavParser::New_exprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitNew_expr(this);
 }
 
 
@@ -3574,18 +3119,6 @@ tree::TerminalNode* JvavParser::Newerror_exprContext::Rparenthesis() {
 
 size_t JvavParser::Newerror_exprContext::getRuleIndex() const {
   return JvavParser::RuleNewerror_expr;
-}
-
-void JvavParser::Newerror_exprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterNewerror_expr(this);
-}
-
-void JvavParser::Newerror_exprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitNewerror_expr(this);
 }
 
 
@@ -3749,18 +3282,6 @@ size_t JvavParser::Newvar_exprContext::getRuleIndex() const {
   return JvavParser::RuleNewvar_expr;
 }
 
-void JvavParser::Newvar_exprContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterNewvar_expr(this);
-}
-
-void JvavParser::Newvar_exprContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitNewvar_expr(this);
-}
-
 
 std::any JvavParser::Newvar_exprContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -3874,18 +3395,6 @@ size_t JvavParser::TypenameContext::getRuleIndex() const {
   return JvavParser::RuleTypename;
 }
 
-void JvavParser::TypenameContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterTypename(this);
-}
-
-void JvavParser::TypenameContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitTypename(this);
-}
-
 
 std::any JvavParser::TypenameContext::accept(tree::ParseTreeVisitor *visitor) {
   if (auto parserVisitor = dynamic_cast<JvavParserVisitor*>(visitor))
@@ -3958,18 +3467,6 @@ tree::TerminalNode* JvavParser::Basic_typeContext::Identifier() {
 
 size_t JvavParser::Basic_typeContext::getRuleIndex() const {
   return JvavParser::RuleBasic_type;
-}
-
-void JvavParser::Basic_typeContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterBasic_type(this);
-}
-
-void JvavParser::Basic_typeContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<JvavParserListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitBasic_type(this);
 }
 
 
