@@ -57,6 +57,6 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "thread": "cpp",
-        "*.java": "cpp"
+        "*.java": "java"
     }
 }

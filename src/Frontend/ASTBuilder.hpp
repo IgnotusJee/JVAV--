@@ -207,7 +207,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
         }
     }
 
-    std::any visitReturn_stmt(JvavParser::Return_stmtContext *ctx) {
+    std::any visitReturn_stmt(JvavParser::Return_stmtContext *ctx) override {
         ExprNode *ret = nullptr;
         if (ctx->expression() != nullptr) {
             ret = std::any_cast<ExprNode*>(visit(ctx->expression()));
@@ -215,19 +215,19 @@ class ASTBuilder : public JvavParserBaseVisitor {
         return new returnStmtNode(ret);
     }
 
-    std::any visitBreak_stmt(JvavParser::Break_stmtContext *ctx) {
+    std::any visitBreak_stmt(JvavParser::Break_stmtContext *ctx) override {
         return new breakStmtNode();
     }
 
-    std::any visitContinue_stmt(JvavParser::Continue_stmtContext *ctx) {
+    std::any visitContinue_stmt(JvavParser::Continue_stmtContext *ctx) override {
         return new continueStmtNode();
     }
 
-    std::any visitFlowStmt(JvavParser::FlowStmtContext *ctx) {
+    std::any visitFlowStmt(JvavParser::FlowStmtContext *ctx) override {
         return visit(ctx->flow_stmt());
     }
 
-    std::any visitExpr_stmt(JvavParser::Expr_stmtContext *ctx) {
+    std::any visitExpr_stmt(JvavParser::Expr_stmtContext *ctx) override {
         std::vector<ExprNode*> exprs;
         for (auto Expr : ctx->expression()) {
             if (Expr != nullptr) {
@@ -237,15 +237,15 @@ class ASTBuilder : public JvavParserBaseVisitor {
         return new exprStmtNode(exprs);
     }
 
-    std::any visitExprStmt(JvavParser::ExprStmtContext *ctx) {
+    std::any visitExprStmt(JvavParser::ExprStmtContext *ctx) override {
         return visit(ctx->expr_stmt());
     }
 
-    std::any visitPureExpr(JvavParser::PureExprContext *ctx) {
+    std::any visitPureExpr(JvavParser::PureExprContext *ctx) override {
         return visit(ctx->expression());
     }
 
-    std::any visitConst_expr(JvavParser::Const_exprContext *ctx) {
+    std::any visitConst_expr(JvavParser::Const_exprContext *ctx) override {
         if (ctx->True() != nullptr) {
             return new boolNode(true);
         } 
@@ -264,20 +264,20 @@ class ASTBuilder : public JvavParserBaseVisitor {
         }
     }
 
-    std::any visitConstExpr(JvavParser::ConstExprContext *ctx) {
+    std::any visitConstExpr(JvavParser::ConstExprContext *ctx) override {
         return visit(ctx->const_expr());
     }
 
-    std::any visitVarExpr(JvavParser::VarExprContext *ctx) {
+    std::any visitVarExpr(JvavParser::VarExprContext *ctx) override {
         std::string name = ctx->Identifier()->getText();
         return new varExprNode(name);
     }
 
-    std::any visitThisExpr(JvavParser::ThisExprContext *ctx) {
+    std::any visitThisExpr(JvavParser::ThisExprContext *ctx) override {
         return new thisExprNode();
     }
 
-    std::any visitFunc_expr(JvavParser::Func_exprContext *ctx) {
+    std::any visitFunc_expr(JvavParser::Func_exprContext *ctx) override {
         std::string name = ctx->Identifier()->getText();
         std::vector<ExprNode*> args;
         if (ctx->argslist() != nullptr) {
@@ -291,11 +291,11 @@ class ASTBuilder : public JvavParserBaseVisitor {
         return new funcExprNode(args, name);
     }
 
-    std::any visitFuncExpr(JvavParser::FuncExprContext *ctx) {
+    std::any visitFuncExpr(JvavParser::FuncExprContext *ctx) override {
         return visit(ctx->func_expr());
     }
 
-    std::any visitMemberExpr(JvavParser::MemberExprContext *ctx) {
+    std::any visitMemberExpr(JvavParser::MemberExprContext *ctx) override {
         ExprNode *expr = std::any_cast<ExprNode*>(visit(ctx->expression(0)));
         ASTNode *member = std::any_cast<ASTNode*>(visit(ctx->expression(1)));
         if (auto func = dynamic_cast<funcExprNode*>(member)) {
@@ -309,13 +309,13 @@ class ASTBuilder : public JvavParserBaseVisitor {
         }
     }
 
-    std::any visitArrayExpr(JvavParser::ArrayExprContext *ctx) {
+    std::any visitArrayExpr(JvavParser::ArrayExprContext *ctx) override {
         ExprNode *name = std::any_cast<ExprNode*>(visit(ctx->expression(0)));
         ExprNode *index = std::any_cast<ExprNode*>(visit(ctx->expression(1)));
         return new arrayExprNode(name, index);
     }
 
-    std::any visitNewvar_expr(JvavParser::Newvar_exprContext *ctx) {
+    std::any visitNewvar_expr(JvavParser::Newvar_exprContext *ctx) override {
         Type *type = (std::any_cast<typeNode*>(visit(ctx->basic_type())))->type;
         std::vector<ExprNode*> exprs;
         for (auto Expr : ctx->expression()) {
@@ -327,7 +327,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
         return new newExprNode(type, exprs, dim);
     }
 
-    std::any visitNew_expr(JvavParser::New_exprContext *ctx) {
+    std::any visitNew_expr(JvavParser::New_exprContext *ctx) override {
         if (ctx->newerror_expr() != nullptr) {
             throw "New array expression wrong";
         } else {
@@ -335,11 +335,11 @@ class ASTBuilder : public JvavParserBaseVisitor {
         }
     }
 
-    std::any visitNewExpr(JvavParser::NewExprContext *ctx) {
+    std::any visitNewExpr(JvavParser::NewExprContext *ctx) override {
         return visit(ctx->new_expr());
     }
 
-    std::any visitSuffixUnaryExpr(JvavParser::SuffixUnaryExprContext *ctx) {
+    std::any visitSuffixUnaryExpr(JvavParser::SuffixUnaryExprContext *ctx) override {
         ExprNode *expr = std::any_cast<ExprNode*>(visit(ctx->expression()));
         suffixUnaryExprNode::suffixOpType opCode;
         auto Op = ctx->op->getText();
@@ -355,7 +355,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
         return new suffixUnaryExprNode(expr, opCode);
     }
 
-    std::any visitPrefixUnaryExpr(JvavParser::PrefixUnaryExprContext *ctx) {
+    std::any visitPrefixUnaryExpr(JvavParser::PrefixUnaryExprContext *ctx) override {
         ExprNode *expr = std::any_cast<ExprNode*>(visit(ctx->expression()));
         prefixUnaryExprNode::prefixOpType opCode;
         auto Op = ctx->op->getText();
@@ -370,7 +370,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
         return new prefixUnaryExprNode(expr, opCode);
     }
 
-    std::any visitBinaryExpr(JvavParser::BinaryExprContext *ctx) {
+    std::any visitBinaryExpr(JvavParser::BinaryExprContext *ctx) override {
         ExprNode *lhs = std::any_cast<ExprNode*>(visit(ctx->expression(0)));
         ExprNode *rhs = std::any_cast<ExprNode*>(visit(ctx->expression(1)));
         binaryExprNode::binaryOpType opCode;
@@ -399,20 +399,20 @@ class ASTBuilder : public JvavParserBaseVisitor {
         return new binaryExprNode(lhs, rhs, opCode);
     }
 
-    std::any visitTernaryExpr(JvavParser::TernaryExprContext *ctx) {
+    std::any visitTernaryExpr(JvavParser::TernaryExprContext *ctx) override {
         ExprNode *cond = std::any_cast<ExprNode*>(visit(ctx->expression(0)));
         ExprNode *thenExpr = std::any_cast<ExprNode*>(visit(ctx->expression(1)));
         ExprNode *elseExpr = std::any_cast<ExprNode*>(visit(ctx->expression(2)));
         return new ternaryExprNode(cond, thenExpr, elseExpr);
     }
 
-    std::any visitAssignExpr(JvavParser::AssignExprContext *ctx) {
+    std::any visitAssignExpr(JvavParser::AssignExprContext *ctx) override {
         ExprNode *lhs = std::any_cast<ExprNode*>(visit(ctx->expression(0)));
         ExprNode *rhs = std::any_cast<ExprNode*>(visit(ctx->expression(1)));
         return new assignExprNode(lhs, rhs);
     }
 
-    std::any visitTypename(JvavParser::TypenameContext *ctx) {
+    std::any visitTypename(JvavParser::TypenameContext *ctx) override {
         if (!ctx->Lbracket().size()) {
             return visit(ctx->basic_type());
         } 
@@ -424,7 +424,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
         }
     }
 
-    std::any visitBasic_type(JvavParser::Basic_typeContext *ctx) {
+    std::any visitBasic_type(JvavParser::Basic_typeContext *ctx) override {
         if (ctx->Bool() != nullptr) {
             return new typeNode(BoolType);
         } 
