@@ -1,0 +1,27 @@
+#pragma once
+
+#include<vector>
+#include<string>
+#include "ExprNode.hpp"
+
+enum class prefixOpType {
+    Inc, Dec, Not, Inv, Sub
+};
+
+class prefixUnaryExprNode : public ExprNode{
+public:
+    ExprNode *expr;
+    prefixOpType opCode;
+
+    prefixUnaryExprNode(ExprNode *expr, prefixOpType opCode) : expr(expr), opCode(opCode) {
+        this->isAssign = true;
+    }
+
+    void accept(ASTVisitor &visitor) override {
+        visitor.visit(*this);
+    }
+
+    std::string toString() const override {
+        return "prefixUnaryExprNode";
+    }
+};
