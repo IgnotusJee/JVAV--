@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(jvav_parser)
 
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -42,7 +42,9 @@ file(GLOB_RECURSE SRC_FILES
     src/*/*/*.hpp
 )
 
-add_executable(jvav_parser ${SRC_FILES})
+add_executable(jvav_parser ${SRC_FILES}
+        src/Frontend/IRGenerator.hpp
+        src/Tools/globalScope.cpp)
 
 # Link antlr4 runtime and pthread
 target_link_libraries(jvav_parser PRIVATE antlr4-cpp-runtime Threads::Threads LLVM)

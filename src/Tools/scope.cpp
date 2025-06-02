@@ -9,14 +9,14 @@ Scope::Scope(Scope* fatherScope)
     }
 }
 
-void Scope::putType(const std::string& name, Type* type) {
+void Scope::putType(const std::string& name, AST::Type* type) {
     if (members.find(name) != members.end()) {
         throw SemanticError("variable redefine");
     }
     members[name] = type;
 }
 
-Type* Scope::getType(const std::string& name, bool recall) {
+AST::Type* Scope::getType(const std::string& name, bool recall) {
     auto it = members.find(name);
     if (it != members.end()) return it->second;
     if (fatherScope && recall) return fatherScope->getType(name, true);

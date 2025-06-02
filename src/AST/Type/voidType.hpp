@@ -2,6 +2,8 @@
 
 #include "Type.hpp"
 
+namespace AST {
+
 class voidType : public Type {
 public:
     voidType() : Type("void") {}
@@ -14,3 +16,5 @@ public:
         return "void";
     }
 };
+
+} // namespace AST

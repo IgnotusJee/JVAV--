@@ -8,9 +8,9 @@
 
 class typeNode : public ASTNode{
 public:
-    Type *type;
+    AST::Type *type;
 
-    typeNode(Type *type) : type(type) {}
+    typeNode(AST::Type *type) : type(type) {}
 
     void accept(ASTVisitor &visitor) override {
         visitor.visit(this);

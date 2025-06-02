@@ -1,2 +1,4 @@
 build
-Mx-Compiler/
+cmake*
+.idea
+.vscode

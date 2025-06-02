@@ -2,6 +2,8 @@
 
 #include "Type.hpp"
 
+namespace AST {
+
 class nullType : public Type {
 public:
     nullType() : Type("null") {}
@@ -14,3 +16,5 @@ public:
         return "null";
     }
 };
+
+} // namespace AST

@@ -2,6 +2,8 @@
 
 #include "Type.hpp"
 
+namespace AST {
+
 class stringType : public Type {
 public:
     stringType() : Type("null") {}
@@ -14,3 +16,5 @@ public:
         return "stringType";
     }
 };
+
+} // namespace AST

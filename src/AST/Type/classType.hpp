@@ -3,6 +3,8 @@
 #include <list>
 #include "Type.hpp"
 
+namespace AST {
+
 class classType : public Type {
 public:
     std::string className;
@@ -19,3 +21,5 @@ public:
         return "class<" + className + ">";
     }
 };
+
+} // namespace AST

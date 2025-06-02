@@ -1,18 +1,20 @@
 #pragma once
 
-#include<string>
+#include <string>
 #include "ASTNode.hpp"
 #include "ASTVisitor.h"
 #include "Type/Type.hpp"
+#include <llvm-18/llvm/IR/Type.h>
+#include <llvm-18/llvm/IR/Value.h>
 
 class ExprNode : public ASTNode{
 public:
-    Type *name;
-    // Entity entity;
-    // varEntity addr;
+    AST::Type *name;
+    llvm::Type* entity;
+    llvm::Value* addr;
     bool isAssign, getEntity;
 
-    ExprNode() {
+    ExprNode() :entity(nullptr), addr(nullptr) {
         this->isAssign = false;
         this->getEntity = true;
     }

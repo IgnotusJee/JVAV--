@@ -2,6 +2,8 @@
 
 #include "Type.hpp"
 
+namespace AST {
+
 class boolType : public Type {
 public:
     boolType() : Type("bool") {}
@@ -14,3 +16,5 @@ public:
         return "bool";
     }
 };
+
+} // namespace AST

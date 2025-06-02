@@ -2,6 +2,8 @@
 
 #include "Type.hpp"
 
+namespace AST {
+
 class intType : public Type {
 public:
     intType() : Type("int") {}
@@ -14,3 +16,5 @@ public:
         return "int";
     }
 };
+
+} // namespace AST

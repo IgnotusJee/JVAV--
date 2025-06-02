@@ -2,6 +2,8 @@
 
 #include "Type.hpp"
 
+namespace AST {
+
 class arrayType : public Type {
 public:
     Type* elemType;
@@ -19,3 +21,5 @@ public:
         return "array<" + elemType->toString() + ", " + std::to_string(dim) + ">";
     }
 };
+
+} // namespace AST

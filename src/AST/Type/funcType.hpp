@@ -4,6 +4,8 @@
 #include "../funcDefNode.hpp"
 #include "../paramNode.hpp"
 
+namespace AST {
+
 class funcType : public Type {
 public:
     funcDefNode* func;
@@ -25,3 +27,5 @@ public:
         return "func";
     }
 };
+
+} // namespace AST

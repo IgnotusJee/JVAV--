@@ -2,6 +2,8 @@
 
 #include <string>
 
+namespace AST {
+
 class Type {
 public:
     std::string typeName;
@@ -11,3 +13,6 @@ public:
     virtual bool equal(const Type &) const = 0;
     virtual std::string toString() const = 0;
 };
+
+}
+
