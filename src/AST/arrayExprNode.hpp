@@ -6,8 +6,8 @@
 
 class arrayExprNode : public ExprNode{
 public:
-    ExprNode *name;
-    ExprNode *index;
+    ExprNode *name; // 数组名称
+    ExprNode *index; // 计算数组索引的表达式
 
     arrayExprNode(ExprNode *name, ExprNode *index)
         : name(name), index(index) {

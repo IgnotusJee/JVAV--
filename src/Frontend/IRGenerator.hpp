@@ -32,7 +32,7 @@ std::vector<std::string> split(const std::string& str, const char &comma) {
 
     while (start != str.end()) {
         auto end = std::find(start, str.end(), comma);
-        tokens.push_back(std::string(start, end));
+        tokens.emplace_back(start, end);
         start = end == str.end() ? end : end + 1;
     }
 
@@ -248,7 +248,7 @@ public:
     }
 
 	void visit(varExprNode *it) override {
-
+		lastValue = symbolTable.findValue(it->name);
 	}
 
     void visit(assignExprNode *it) override {
@@ -286,47 +286,47 @@ public:
 
     void visit(varNode *it) override {
 	    throw std::runtime_error("currently we assume this cannot be visited");
-	    // 查找变量
-	    llvm::Value* varPtr = symbolTable.findValue(it->name);
-
-	    // 类成员处理
-	    if (!varPtr && thisPtr && currentClass) {
-	        int index = getMemberIndex(it->name);
-	        if (index >= 0) {
-	            // 使用结构体指针和索引获取成员的地址
-	            varPtr = builder->CreateStructGEP(
-	                currentClass,
-	                thisPtr,
-	                index,
-	                it->name + ".addr"
-	            );
-	        }
-	    }
-
-	    if (!varPtr) {
-	        throw std::runtime_error("Undefined variable: " + it->name);
-	    }
-
-		 // 验证变量指针类型
-	    if (!varPtr->getType()->isPointerTy()) {
-	        throw std::runtime_error("Variable " + it->name + " is not a pointer type");
-	    }
-
-	    // 获取指针指向的元素类型
-	    PointerType* ptrType = cast<PointerType>(varPtr->getType());
-	    Type* elementType = getPointedType(ptrType);
-
-	    // 获取当前上下文
-	    auto context = currentContext();
-
-	    // 在左值上下文或禁用加载时返回地址
-	    if (context.isLValue || !context.isLoadAllowed) {
-	        lastValue = varPtr;
-	        return;
-	    }
-
-	    // 否则加载值（右值上下文）
-	    lastValue = builder->CreateLoad(elementType, varPtr, it->name + ".val");
+//	    // 查找变量
+//	    llvm::Value* varPtr = symbolTable.findValue(it->name);
+//
+//	    // 类成员处理
+//	    if (!varPtr && thisPtr && currentClass) {
+//	        int index = getMemberIndex(it->name);
+//	        if (index >= 0) {
+//	            // 使用结构体指针和索引获取成员的地址
+//	            varPtr = builder->CreateStructGEP(
+//	                currentClass,
+//	                thisPtr,
+//	                index,
+//	                it->name + ".addr"
+//	            );
+//	        }
+//	    }
+//
+//	    if (!varPtr) {
+//	        throw std::runtime_error("Undefined variable: " + it->name);
+//	    }
+//
+//		 // 验证变量指针类型
+//	    if (!varPtr->getType()->isPointerTy()) {
+//	        throw std::runtime_error("Variable " + it->name + " is not a pointer type");
+//	    }
+//
+//	    // 获取指针指向的元素类型
+//	    PointerType* ptrType = cast<PointerType>(varPtr->getType());
+//	    Type* elementType = getPointedType(ptrType);
+//
+//	    // 获取当前上下文
+//	    auto context = currentContext();
+//
+//	    // 在左值上下文或禁用加载时返回地址
+//	    if (context.isLValue || !context.isLoadAllowed) {
+//	        lastValue = varPtr;
+//	        return;
+//	    }
+//
+//	    // 否则加载值（右值上下文）
+//	    lastValue = builder->CreateLoad(elementType, varPtr, it->name + ".val");
 	}
 
     void visit(thisExprNode *it) override {
@@ -618,15 +618,17 @@ public:
         // 获取对象指针
         it->expr->accept((ASTVisitor&) *this);
         Value* objPtr = lastValue;
+	    auto classType = getValueType(objPtr);
+		if(!classType->isStructTy())
+			throw std::runtime_error(std::string (objPtr->getName()) + " is not a class instance");
 
         // 成员变量访问
-        int index = getMemberIndex(it->name);
+        int index = getMemberIndex(static_cast<StructType *>(classType), it->name);
         if (index < 0) {
             throw std::runtime_error("Member not found: " + it->name);
         }
 
-        Value* memberPtr = builder->CreateStructGEP(
-            getPointedType(objPtr->getType()), objPtr, index);
+        Value* memberPtr = builder->CreateStructGEP(classType, objPtr, index);
 
         // 作为左值处理，返回指针
         lastValue = memberPtr;
@@ -642,7 +644,7 @@ public:
 
     void visit(memberFuncExprNode *it) override {
 //        // 获取对象指针
-//        it->expr->accept((ASTVisitor&) *this);
+//        it->exprs->accept((ASTVisitor&) *this);
 //        Value* objPtr = lastValue;
 //
 //        // 成员函数调用
@@ -687,47 +689,50 @@ public:
     }
 
     void visit(newExprNode *it) override {
-//        // 基本类型处理
-//        Type* baseType = getBasicType(it->typeName);
-//
-//        if (it->dim) {
-//            // 数组分配
-//            it->size->accept((ASTVisitor&) *this);
-//            Value* size = lastValue;
-//
-//            // 创建malloc调用
-//            Function* mallocFunc = getMallocFunction();
-//            Value* arraySize = builder->CreateMul(
-//                size, ConstantInt::get(size->getType(), getTypeSize(baseType)));
-//
-//            Value* arrayPtr = builder->CreateCall(mallocFunc, {arraySize});
-//
-//            // 类型转换
-//            arrayPtr = builder->CreateBitCast(
-//                arrayPtr, PointerType::get(baseType, 0));
-//
-//            lastValue = arrayPtr;
-//        } else {
-//            // 对象分配
-//            Function* mallocFunc = getMallocFunction();
-//            Value* size = ConstantInt::get(
-//                Type::getInt32Ty(*context), getTypeSize(baseType));
-//
-//            Value* objPtr = builder->CreateCall(mallocFunc, {size});
-//
-//            // 类型转换
-//            objPtr = builder->CreateBitCast(
-//                objPtr, PointerType::get(baseType, 0));
-//
-//            // 调用构造函数
-//            if (Function* ctor = module->getFunction(
-//                getStructNameFromType(baseType) + "_ctor")) {
-//
-//                builder->CreateCall(ctor, {objPtr});
-//            }
-//
-//            lastValue = objPtr;
-//        }
+        // 基本类型处理
+        Type* baseType = getBasicType(it->typeName);
+
+        // 创建malloc调用
+        Function* mallocFunc = getMallocFunction();
+
+        if (it->dim) {
+			Value* lastSize = nullptr;
+			for(auto expr: it->exprs) {
+				expr->accept((ASTVisitor&) *this);
+				Value* curDimSize = lastValue;
+				if(lastSize == nullptr) lastSize = curDimSize;
+				else lastSize = builder->CreateMul(lastValue, curDimSize);
+			}
+
+            Value* arraySize = builder->CreateMul(
+                lastSize, ConstantInt::get(lastSize->getType(), getTypeSize(baseType)));
+            Value* arrayPtr = builder->CreateCall(mallocFunc, {arraySize});
+
+            // 类型转换
+            arrayPtr = builder->CreateBitCast(
+                arrayPtr, PointerType::get(baseType, 0));
+
+            lastValue = arrayPtr;
+        } else {
+            // 对象分配
+            Value* size = ConstantInt::get(
+                Type::getInt32Ty(*context), getTypeSize(baseType));
+
+            Value* objPtr = builder->CreateCall(mallocFunc, {size});
+
+            // 类型转换
+            objPtr = builder->CreateBitCast(
+                objPtr, PointerType::get(baseType, 0));
+
+            // 调用构造函数
+            if (baseType->isStructTy()) {
+				Function* ctor = module->getFunction(std::string(baseType->getStructName()) + "_ctor");
+				if(ctor)
+	                builder->CreateCall(ctor, {objPtr});
+            }
+
+            lastValue = objPtr;
+        }
     }
 
     void visit(prefixUnaryExprNode *it) override {
@@ -788,7 +793,7 @@ public:
     }
 
     void visit(binaryExprNode *it) override {
-    // 访问左操作数
+	    // 访问左操作数
         it->lhs->accept((ASTVisitor&) *this);
         Value* lhs = lastValue;
 
@@ -961,7 +966,7 @@ private:
 			return PointerType::get(Type::getInt8Ty(*context), 0);
 		}
 		else if(dynamic_cast<AST::classType*>(type)) {
-			return getOrCreateClassType(dynamic_cast<AST::classType*>(type)->className);
+			return symbolTable.findType(dynamic_cast<AST::classType*>(type)->className);
 		}
         throw std::runtime_error("Unsupported type");
     }
@@ -984,35 +989,21 @@ private:
         return FunctionType::get(retType, paramTypes, false);
     }
 
-//    // 获取成员变量索引
-//    int getMemberIndex(llvm::StructType* structType, const std::string& name) {
-//	    unsigned index = 0;
-//	    for (auto elementType : structType->elements()) {
-//	        // 如果结构体有名称信息（在调试版本中）
-//	        if (elementType->hasName() && elementType->getName() == name) {
-//	            return index;
-//	        }
-//	        // 或者在索引中查找（如果是直接命名的结构体）
-//	        if (structType->isLiteral() && index < structType->getNumElements()) {
-//	            // 对于字面量结构体，我们可能没有名称信息
-//	            // 这里可以添加自定义名称映射逻辑
-//	        }
-//	        index++;
-//	    }
-//	    return -1;
-//	}
+    // 获取成员变量索引
+    int getMemberIndex(llvm::StructType* structType, const std::string& name) {
+		NamedMDNode* classMD = module->getNamedMetadata("class." + structType->getName());
+        if (!classMD || classMD->getNumOperands() == 0) return -1;
+		auto* str = cast<MDString>(classMD->getOperand(0)->getOperand(0));
+        std::vector<std::string> memberNames = split(std::string(str->getString()), ',');
+        for (int i = 0; i < memberNames.size(); ++i) {
+            if (memberNames[i] == name) {
+                return i;
+            }
+        }
+        return -1;
+	}
 
-    // 获取或创建类类型
-    StructType* getOrCreateClassType(const std::string& className) {
-//        StructType* type = module->getIdentifiedStructTypes().;
-//        if (!type) {
-//            type = StructType::create(*context, className);
-//            // 延迟填充成员 - 当定义类时设置
-//        }
-//        return type;
-    }
-
-        // 获取类型大小（字节数）
+	// 获取类型大小（字节数）
     uint64_t getTypeSize(Type* type) {
         return module->getDataLayout().getTypeAllocSize(type);
     }
@@ -1057,20 +1048,20 @@ private:
 	    throw std::runtime_error("Unsupported type conversion");
     }
     // 获取成员变量索引
-    int getMemberIndex(const std::string& memberName) {
-        if (!currentClass) return -1;
-        // 从类元数据获取成员变量索引
-        NamedMDNode* classMD = module->getNamedMetadata("class." + currentClass->getName());
-        if (!classMD || classMD->getNumOperands() == 0) return -1;
-        MDString* str = cast<MDString>(classMD->getOperand(0)->getOperand(0));
-        std::vector<std::string> memberNames = split(std::string(str->getString()), ',');
-        for (int i = 0; i < memberNames.size(); ++i) {
-            if (memberNames[i] == memberName) {
-                return i;
-            }
-        }
-        return -1;
-    }
+//    int getMemberIndex(const std::string& memberName) {
+//        if (!currentClass) return -1;
+//        // 从类元数据获取成员变量索引
+//        NamedMDNode* classMD = module->getNamedMetadata("class." + currentClass->getName());
+//        if (!classMD || classMD->getNumOperands() == 0) return -1;
+//        MDString* str = cast<MDString>(classMD->getOperand(0)->getOperand(0));
+//        std::vector<std::string> memberNames = split(std::string(str->getString()), ',');
+//        for (int i = 0; i < memberNames.size(); ++i) {
+//            if (memberNames[i] == memberName) {
+//                return i;
+//            }
+//        }
+//        return -1;
+//    }
     // 获取malloc函数
     Function* getMallocFunction() {
         Function* func = module->getFunction("malloc");

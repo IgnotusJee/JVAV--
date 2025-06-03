@@ -7,8 +7,8 @@
 
 class memberVarExprNode : public ExprNode{
 public:
-    ExprNode *expr;
-    std::string name;
+    ExprNode *expr; // 产生对象的表达式
+    std::string name; // 类成员名称
 
     memberVarExprNode(ExprNode *expr, std::string &name) : expr(expr), name(name) {}
 
