@@ -23,11 +23,11 @@ T safeAnyCast(const std::any &a) {
 }
 
 class ASTBuilder : public JvavParserBaseVisitor {
-    Type *IntType = new intType();
-    Type *BoolType = new boolType();
-    Type *StringType = new stringType();
-    Type *VoidType = new voidType();
-    Type *NullType = new nullType();
+    AST::Type *IntType = new AST::intType();
+    AST::Type *BoolType = new AST::boolType();
+    AST::Type *StringType = new AST::stringType();
+    AST::Type *VoidType = new AST::voidType();
+    AST::Type *NullType = new AST::nullType();
 
     std::any visitProgram(JvavParser::ProgramContext *ctx) override {
         std::vector<defNode*> DefNodes;
@@ -38,14 +38,11 @@ class ASTBuilder : public JvavParserBaseVisitor {
             } 
             else if (auto funcDef = dynamic_cast<JvavParser::Func_defContext*>(Def)) {
                 DefNodes.push_back(safeAnyCast<funcDefNode*>(visit(funcDef)));
-                std::cout << "2\n";
             } 
             else if (auto classDef = dynamic_cast<JvavParser::Class_defContext*>(Def)) {
                 DefNodes.push_back(safeAnyCast<classDefNode*>(visit(classDef)));
             }
         }
-
-        std::cout << "3\n";
 
         return dynamic_cast<ASTNode*>(new rootNode(DefNodes));
     }
@@ -337,7 +334,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
     }
 
     std::any visitNewvar_expr(JvavParser::Newvar_exprContext *ctx) override {
-        Type *type = (safeAnyCast<typeNode*>(visit(ctx->basic_type())))->type;
+        AST::Type *type = (safeAnyCast<typeNode*>(visit(ctx->basic_type())))->type;
         std::vector<ExprNode*> exprs;
         for (auto Expr : ctx->expression()) {
             if (Expr != nullptr) {
@@ -440,7 +437,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
         else {
             auto elemType = (safeAnyCast<typeNode*>(visit(ctx->basic_type())))->type;
             int dim = ctx->Lbracket().size();
-            arrayType *ArrayType = new arrayType(elemType, dim);
+            AST::arrayType *ArrayType = new AST::arrayType(elemType, dim);
             return dynamic_cast<ASTNode*>(new typeNode(ArrayType));
         }
     }
@@ -456,7 +453,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
             return dynamic_cast<ASTNode*>(new typeNode(StringType));
         } 
         else {
-            auto ClassType = new classType(ctx->Identifier()->getText());
+            auto ClassType = new AST::classType(ctx->Identifier()->getText());
             return dynamic_cast<ASTNode*>(new typeNode(ClassType));
         }
     }

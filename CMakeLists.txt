@@ -44,7 +44,8 @@ file(GLOB_RECURSE SRC_FILES
 
 add_executable(jvav_parser ${SRC_FILES}
         src/Frontend/IRGenerator.hpp
-        src/Tools/globalScope.cpp)
+        src/Tools/globalScope.cpp
+        src/Frontend/SymbolTable.hpp)
 
 # Link antlr4 runtime and pthread
 target_link_libraries(jvav_parser PRIVATE antlr4-cpp-runtime Threads::Threads LLVM)
