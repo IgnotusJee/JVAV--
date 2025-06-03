@@ -4,8 +4,8 @@
 #include "ASTNode.hpp"
 #include "ASTVisitor.h"
 #include "Type/Type.hpp"
-#include <llvm-18/llvm/IR/Type.h>
-#include <llvm-18/llvm/IR/Value.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Value.h>
 
 class ExprNode : public ASTNode{
 public:

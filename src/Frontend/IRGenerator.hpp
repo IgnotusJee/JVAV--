@@ -1,6 +1,4 @@
 #include "AST/ASTVisitor.h"
-#include "Tools/scope.h"
-#include "Tools/globalScope.h"
 #include "AST/Type/Type.hpp"
 #include "AST/Type/intType.hpp"
 #include "AST/Type/boolType.hpp"
