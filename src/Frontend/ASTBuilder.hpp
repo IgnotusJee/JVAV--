@@ -6,12 +6,6 @@
 
 template <typename T>
 T safeAnyCast(const std::any &a) {
-    std::cout << a.type().name() << '\n';
-    std::cout << typeid(T).name() << '\n';
-    std::cout << (typeid(T).name() == a.type().name() ? "yes" : "no") << "\n\n";
-    if(std::string(typeid(T).name()) == "P11funcDefNode") {
-        std::cout << "1\n";
-    }
     ASTNode* ptr;
     try {
         ptr = std::any_cast<ASTNode*>(a);
@@ -322,7 +316,8 @@ class ASTBuilder : public JvavParserBaseVisitor {
         else if (auto var = dynamic_cast<varExprNode*>(member)) {
             std::string name = var->name;
             return dynamic_cast<ASTNode*>(new memberVarExprNode(expr, name));
-        } else {
+        } 
+        else {
             throw std::runtime_error("Member type wrong");
         }
     }
@@ -348,7 +343,8 @@ class ASTBuilder : public JvavParserBaseVisitor {
     std::any visitNew_expr(JvavParser::New_exprContext *ctx) override {
         if (ctx->newerror_expr() != nullptr) {
             throw std::runtime_error("New array expression wrong");
-        } else {
+        } 
+        else {
             return visit(ctx->newvar_expr());
         }
     }
