@@ -21,7 +21,7 @@ public:
     }
 
     void push() {
-        scopes.push_back(Scope());
+        scopes.emplace_back();
     }
 
     void pop() {

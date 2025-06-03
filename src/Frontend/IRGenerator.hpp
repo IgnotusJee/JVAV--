@@ -14,7 +14,6 @@
 #include "Frontend/SymbolTable.hpp"
 
 #include "AST/rootNode.hpp"
-#include "AST/varDefNode.hpp"
 #include "AST/classDefNode.hpp"
 #include "AST/varDefNode.hpp"
 #include "AST/varDefStmtNode.hpp"
@@ -46,6 +45,7 @@
 #include <llvm/IR/Constants.h>
 #include <llvm/ADT/APInt.h>
 #include <llvm/IR/ValueSymbolTable.h>
+#include <llvm/IR/Verifier.h>
 #include <unordered_map>
 #include <memory>
 #include <cctype>
@@ -117,6 +117,10 @@ public:
     ~IRGenerator() override {
         delete builder;
     }
+
+	auto getModule() const {
+		return module.get();
+	}
 
 	// 进入新的访问上下文
     void pushContext(bool isLValue = false, bool isLoadAllowed = true) {
@@ -228,11 +232,37 @@ public:
         thisPtr = nullptr;
     }
 
+	// 全局变量声明和类内部声明
+	void visit(varDefNode *it) override {
+		// 获取当前生成类型的 llvm 类型
+		llvm::Type* varType = getType(it->typeName);
+
+		if(currentClass == nullptr) {
+			for (auto& var : it->var) {
+				auto globalVar = new GlobalVariable(
+				    *module,                    // 所属模块
+				    varType,                       // 变量类型
+				    false,                // 是否为常量
+				    GlobalValue::LinkageTypes::ExternalLinkage, // 链接类型
+				    nullptr,                // 初始值 (Constant*)
+				    var->name               // 变量名
+				);
+
+				symbolTable.addValue(var->name, globalVar);
+			}
+		}
+		else {
+			throw std::runtime_error("unimplemented");
+		}
+	}
+
+	// 局部变量定义和初始化
     void visit(varDefStmtNode *it) override {
+		// 获取当前生成类型的 llvm 类型
         llvm::Type* varType = getType(it->typeName);
 
         for (auto& var : it->var) {
-            auto* alloca = builder->CreateAlloca(
+            auto* localVar = builder->CreateAlloca(
                 varType, nullptr, var->name);
 
             if (var->init) {
@@ -243,15 +273,19 @@ public:
                     initVal = createTypeCast(initVal, varType);
                 }
 
-                builder->CreateStore(initVal, alloca);
+                builder->CreateStore(initVal, localVar);
             } else {
                 builder->CreateStore(
-                    llvm::Constant::getNullValue(varType), alloca);
+		                llvm::Constant::getNullValue(varType), localVar);
             }
 
-            symbolTable.addValue(var->name, alloca);
+            symbolTable.addValue(var->name, localVar);
         }
     }
+
+	void visit(varExprNode *it) override {
+
+	}
 
     void visit(assignExprNode *it) override {
         // 处理右值表达式
@@ -287,6 +321,7 @@ public:
     }
 
     void visit(varNode *it) override {
+	    throw std::runtime_error("currently we assume this cannot be visited");
 	    // 查找变量
 	    llvm::Value* varPtr = symbolTable.findValue(it->name);
 
@@ -637,8 +672,11 @@ public:
 	 * functionExpr 和 functionDef 相关的llvm ir函数调用我实在不知道怎么搞了
 	 *
 	 */
+	 virtual void visit(funcExprNode *it) override {
 
-//    void visit(memberFuncExprNode *it) override {
+	 }
+
+    void visit(memberFuncExprNode *it) override {
 //        // 获取对象指针
 //        it->expr->accept((ASTVisitor&) *this);
 //        Value* objPtr = lastValue;
@@ -665,7 +703,7 @@ public:
 //            cast<PointerType>(funcVal->getType())->getElementType());
 //
 //        lastValue = builder->CreateCall(funcType, funcVal, args);
-//    }
+    }
 
     void visit(arrayExprNode *it) override {
         // 获取数组指针
@@ -684,7 +722,7 @@ public:
         lastValue = elemPtr;
     }
 
-//    void visit(newExprNode *it) override {
+    void visit(newExprNode *it) override {
 //        // 基本类型处理
 //        Type* baseType = getBasicType(it->typeName);
 //
@@ -726,7 +764,7 @@ public:
 //
 //            lastValue = objPtr;
 //        }
-//    }
+    }
 
     void visit(prefixUnaryExprNode *it) override {
         it->expr->accept((ASTVisitor&) *this);
@@ -933,6 +971,7 @@ public:
     void visit(typeNode *it) override {
         // 类型节点一般用于声明，在变量定义或函数参数处理时使用，不需要生成代码
         // 所以这里无需操作
+		throw std::runtime_error("currently we assume this cannot be visited");
     }
 
 private:
@@ -1135,7 +1174,7 @@ private:
 // 初始化
 void generateIR(ASTNode* root) {
     IRGenerator generator;
-    root->accept(&generator);
+    root->accept((ASTVisitor &) generator);
 
     // 验证并输出
     if (verifyModule(*generator.getModule(), &errs())) {

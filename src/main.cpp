@@ -4,6 +4,7 @@
 #include "JvavLexer.h"
 #include "JvavParser.h"
 #include "Frontend/ASTBuilder.hpp"
+#include "Frontend/IRGenerator.hpp"
 using namespace antlr4;
 using namespace std;
 
@@ -25,7 +26,7 @@ int main(int argc, const char* argv[]) {
     tree::ParseTree* parseTreeRoot = parser.program();
     cout << parseTreeRoot->toStringTree(&parser) << endl;
     ASTBuilder astBuilder;
-    rootNode *ASTRoot = std::any_cast<rootNode*>(astBuilder.visit(parseTreeRoot));
-
+    rootNode *ASTRoot = dynamic_cast<rootNode*>(std::any_cast<ASTNode*>(astBuilder.visit(parseTreeRoot)));
+	generateIR(ASTRoot);
     return 0;
 }

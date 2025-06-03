@@ -1,5 +1,6 @@
 #pragma once
 
+#include <utility>
 #include<vector>
 #include<string>
 #include "defNode.hpp"
@@ -12,7 +13,7 @@ public:
     typeNode *typeName;
     std::vector<varNode*> var;
 
-    varDefNode(typeNode *typeName, std::vector<varNode*> var) : typeName(typeName), var(var) {}
+    varDefNode(typeNode *typeName, std::vector<varNode*> var) : typeName(typeName), var(std::move(var)) {}
 
     void accept(ASTVisitor &visitor) override {
         visitor.visit(this);
