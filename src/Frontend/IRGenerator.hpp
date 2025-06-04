@@ -844,19 +844,19 @@ public:
         it->rhs->accept((ASTVisitor&) *this);
         Value* rhs = it->rhs->addr;
 
-        std::cerr << "[assign] lhs: ";
-        if (lhs) lhs->print(llvm::errs());
-        else std::cerr << "null";
-        std::cerr << std::endl;
-        it->lhs->entity->print(llvm::errs());
-        std::cerr << std::endl;
-        
-        std::cerr << "[assign] rhs: ";
-        if (rhs) rhs->print(llvm::errs());
-        else std::cerr << "null";
-        std::cerr << std::endl;
-        it->rhs->entity->print(llvm::errs());
-        std::cerr << std::endl;
+//        std::cerr << "[assign] lhs: ";
+//        if (lhs) lhs->print(llvm::errs());
+//        else std::cerr << "null";
+//        std::cerr << std::endl;
+//        it->lhs->entity->print(llvm::errs());
+//        std::cerr << std::endl;
+//
+//        std::cerr << "[assign] rhs: ";
+//        if (rhs) rhs->print(llvm::errs());
+//        else std::cerr << "null";
+//        std::cerr << std::endl;
+//        it->rhs->entity->print(llvm::errs());
+//        std::cerr << std::endl;
 
         if (lhs && lhs->getType()->isPointerTy()) {
             lhs = builder->CreateLoad(it->lhs->entity, lhs, "loadlhs");
@@ -1072,10 +1072,13 @@ private:
             argExpr->accept((ASTVisitor&) *this);
             popContext();
             Value* argVal = argExpr->addr; // 获取参数值
+			Type* argType = argExpr->entity;
 
             // 类型检查与转换：确保传递的参数类型与函数期望的参数类型匹配。
             if (args.size() < func->getFunctionType()->getNumParams()) {
                 Type* expectedType = func->getFunctionType()->getParamType(args.size());
+				if(argVal->getType()->isPointerTy())
+					argVal = builder->CreateLoad(argType, argVal, "loadarg");
                 if (argVal->getType() != expectedType) {
                     argVal = createTypeCast(argVal, expectedType);
                     if (!argVal) {
@@ -1159,6 +1162,8 @@ private:
 	Function* getInlineFunction(const std::string &name) {
 		if(name == "print")
 			return getFunc("print", Type::getVoidTy(*context), PointerType::get(Type::getInt8Ty(*context), 0));
+		if(name == "printInt")
+			return getFunc("printInt", Type::getVoidTy(*context), Type::getInt32Ty(*context));
 		else if(name == "toString")
 			return getFunc("toString", PointerType::get(Type::getInt8Ty(*context), 0), Type::getInt32Ty(*context));
 		else if(name == "getInt")
