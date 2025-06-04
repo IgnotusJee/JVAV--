@@ -62,9 +62,6 @@ class IRGenerator : public ASTVisitor {
     StructType* currentClass = nullptr;
     Value* thisPtr = nullptr;
 
-    // 当前返回值
-    Value* lastValue = nullptr;
-
 	struct AccessContext {
         bool isLValue = false;   // 是否在左值上下文（需要地址）
         bool isLoadAllowed = true; // 是否允许加载值
@@ -231,7 +228,7 @@ public:
 
             if (var->init) {
                 var->init->accept((ASTVisitor &) *this);
-                auto* initVal = lastValue;
+                auto* initVal = var->init->addr;
 
                 if (varType != initVal->getType()) {
                     initVal = createTypeCast(initVal, varType);
@@ -248,37 +245,38 @@ public:
     }
 
 	void visit(varExprNode *it) override {
-		lastValue = symbolTable.findValue(it->name);
+		it->addr = symbolTable.findValue(it->name);
+		it->entity = it->addr->getType();
 	}
 
     void visit(assignExprNode *it) override {
         // 处理右值表达式
         it->rhs->accept((ASTVisitor&) *this);
-        Value* rvalue = lastValue;
+        Value* rvalue = it->rhs->addr;
 
         // 处理左值表达式
         it->lhs->accept((ASTVisitor&) *this);
-        Value* lvalue = lastValue;
+        Value* lvalue = it->lhs->addr;
 
         // 存储值
         builder->CreateStore(rvalue, lvalue);
 
         // 赋值表达式返回值是被赋的值
-        lastValue = rvalue;
+        it->addr = rvalue;
     }
 
     void visit(returnStmtNode *it) override {
         if (it->ret) {
             it->ret->accept((ASTVisitor&) *this);
 
-			Value* retVal = lastValue;
+			Value* retVal = it->ret->addr;
 			// 类型检查
             Type* expectedType = currentFunction->getReturnType();
             if (retVal->getType() != expectedType) {
                 retVal = createTypeCast(retVal, expectedType);
             }
 
-            builder->CreateRet(lastValue);
+            builder->CreateRet(retVal);
         } else {
             builder->CreateRetVoid();
         }
@@ -287,72 +285,73 @@ public:
     void visit(varNode *it) override {
 	    throw std::runtime_error("currently we assume this cannot be visited");
 
-void visit(varNode *it) override {
-    // 获取当前的访问上下文（是左值还是右值，是否允许加载）。
-    AccessContext ctx = currentContext();
-
-    // 1. 尝试在符号表中查找局部变量或函数参数。
-    Value* val = symbolTable.findValue(it->name);
-    if (val) {
-        // 如果找到了局部变量/参数 (它是一个 AllocaInst，即地址)
-        if (ctx.isLValue) { // 如果是左值上下文，需要地址
-            lastValue = val; // 直接使用其地址
-        } else if (ctx.isLoadAllowed) { // 如果是右值上下文且允许加载
-            lastValue = builder->CreateLoad(val->getType()->getPointerElementType(), val, it->name.c_str()); // 加载该地址处的值
-        } else { // 右值上下文但不允许加载 (例如，在 &x 中 x 的情况，虽然不常见于此)
-            lastValue = val; // 仍然是地址
-        }
-        return; // 找到并处理完毕
-    }
-
-    // 2. 如果不是局部变量，并且当前在类方法中 (thisPtr 有效)，则尝试作为类成员查找。
-    if (thisPtr) {
-        StructType* classType = dyn_cast<StructType>(thisPtr->getType()->getPointerElementType());
-        if (classType) {
-            try {
-                // 获取成员变量在类结构中的索引。
-                int memberIdx = getMemberIndex(classType, it->name);
-                // 创建 GEP 指令获取成员变量的地址。
-                // 参数：类型，this指针，0（用于解引用this指针），成员索引。
-                Value* memberPtr = builder->CreateStructGEP(classType, thisPtr, memberIdx, it->name.c_str());
-                
-                if (ctx.isLValue) { // 左值上下文
-                    lastValue = memberPtr; // 结果是成员地址
-                } else if (ctx.isLoadAllowed) { // 右值上下文，允许加载
-                    lastValue = builder->CreateLoad(classType->getElementType(memberIdx), memberPtr, it->name.c_str()); // 加载成员的值
-                } else { // 右值上下文，不允许加载
-                    lastValue = memberPtr; // 结果是成员地址
-                }
-                return; // 找到并处理完毕
-            } catch (const std::runtime_error& e) {
-                // 成员未找到，继续尝试全局变量 (或者可以报错，取决于语言设计)
-            }
-        }
-    }
-
-    // 3. 尝试作为全局变量查找。
-    GlobalVariable* gVar = module->getNamedGlobal(it->name);
-    if (gVar) {
-        if (ctx.isLValue) { // 左值上下文
-            lastValue = gVar; // 全局变量本身就是指针 (地址)
-        } else if (ctx.isLoadAllowed) { // 右值上下文，允许加载
-            lastValue = builder->CreateLoad(gVar->getValueType(), gVar, it->name.c_str()); // 加载全局变量的值
-        } else { // 右值上下文，不允许加载
-            lastValue = gVar; // 结果是全局变量的地址
-        }
-        return; // 找到并处理完毕
-    }
-    
-    // 如果变量在任何地方都未找到，则抛出错误。
-    throw std::runtime_error("Undefined variable: " + it->name);
-}
+//void visit(varNode *it) override {
+//    // 获取当前的访问上下文（是左值还是右值，是否允许加载）。
+//    AccessContext ctx = currentContext();
+//
+//    // 1. 尝试在符号表中查找局部变量或函数参数。
+//    Value* val = symbolTable.findValue(it->name);
+//    if (val) {
+//        // 如果找到了局部变量/参数 (它是一个 AllocaInst，即地址)
+//        if (ctx.isLValue) { // 如果是左值上下文，需要地址
+//            lastValue = val; // 直接使用其地址
+//        } else if (ctx.isLoadAllowed) { // 如果是右值上下文且允许加载
+//            lastValue = builder->CreateLoad(val->getType()->getPointerElementType(), val, it->name.c_str()); // 加载该地址处的值
+//        } else { // 右值上下文但不允许加载 (例如，在 &x 中 x 的情况，虽然不常见于此)
+//            lastValue = val; // 仍然是地址
+//        }
+//        return; // 找到并处理完毕
+//    }
+//
+//    // 2. 如果不是局部变量，并且当前在类方法中 (thisPtr 有效)，则尝试作为类成员查找。
+//    if (thisPtr) {
+//        StructType* classType = dyn_cast<StructType>(thisPtr->getType()->getPointerElementType());
+//        if (classType) {
+//            try {
+//                // 获取成员变量在类结构中的索引。
+//                int memberIdx = getMemberIndex(classType, it->name);
+//                // 创建 GEP 指令获取成员变量的地址。
+//                // 参数：类型，this指针，0（用于解引用this指针），成员索引。
+//                Value* memberPtr = builder->CreateStructGEP(classType, thisPtr, memberIdx, it->name.c_str());
+//
+//                if (ctx.isLValue) { // 左值上下文
+//                    lastValue = memberPtr; // 结果是成员地址
+//                } else if (ctx.isLoadAllowed) { // 右值上下文，允许加载
+//                    lastValue = builder->CreateLoad(classType->getElementType(memberIdx), memberPtr, it->name.c_str()); // 加载成员的值
+//                } else { // 右值上下文，不允许加载
+//                    lastValue = memberPtr; // 结果是成员地址
+//                }
+//                return; // 找到并处理完毕
+//            } catch (const std::runtime_error& e) {
+//                // 成员未找到，继续尝试全局变量 (或者可以报错，取决于语言设计)
+//            }
+//        }
+//    }
+//
+//    // 3. 尝试作为全局变量查找。
+//    GlobalVariable* gVar = module->getNamedGlobal(it->name);
+//    if (gVar) {
+//        if (ctx.isLValue) { // 左值上下文
+//            lastValue = gVar; // 全局变量本身就是指针 (地址)
+//        } else if (ctx.isLoadAllowed) { // 右值上下文，允许加载
+//            lastValue = builder->CreateLoad(gVar->getValueType(), gVar, it->name.c_str()); // 加载全局变量的值
+//        } else { // 右值上下文，不允许加载
+//            lastValue = gVar; // 结果是全局变量的地址
+//        }
+//        return; // 找到并处理完毕
+//    }
+//
+//    // 如果变量在任何地方都未找到，则抛出错误。
+//    throw std::runtime_error("Undefined variable: " + it->name);
+//}
 	}
 
     void visit(thisExprNode *it) override {
         if (!thisPtr) {
             throw std::runtime_error("'this' used outside class context");
         }
-        lastValue = thisPtr;
+        it->addr = thisPtr;
+		it->entity = currentClass;
     }
 
     void visit(paramNode *it) override {
@@ -444,7 +443,7 @@ void visit(varNode *it) override {
             // 条件块
             builder->SetInsertPoint(condBlocks[i]);
             it->cond[i]->accept((ASTVisitor&) *this);
-            Value* cond = lastValue;
+            Value* cond = it->cond[i]->addr;
 
             BasicBlock* nextCond = (i < it->cond.size() - 1) ?
                 condBlocks[i + 1] : elseBB;
@@ -494,7 +493,7 @@ void visit(varNode *it) override {
         // 条件块
         builder->SetInsertPoint(condBB);
         it->cond->accept((ASTVisitor&) *this);
-        Value* cond = lastValue;
+        Value* cond = it->cond->addr;
         builder->CreateCondBr(cond, bodyBB, endBB);
 
         // 循环体
@@ -537,7 +536,7 @@ void visit(varNode *it) override {
         builder->SetInsertPoint(condBB);
         if (it->cond) {
             it->cond->accept((ASTVisitor&) *this);
-            builder->CreateCondBr(lastValue, bodyBB, endBB);
+            builder->CreateCondBr(it->cond->addr, bodyBB, endBB);
         } else {
             builder->CreateBr(bodyBB);
         }
@@ -591,7 +590,7 @@ void visit(varNode *it) override {
         builder->SetInsertPoint(condBB);
         if (it->cond) {
             it->cond->accept((ASTVisitor&) *this);
-            builder->CreateCondBr(lastValue, bodyBB, endBB);
+            builder->CreateCondBr(it->cond->addr, bodyBB, endBB);
         } else {
             builder->CreateBr(bodyBB);
         }
@@ -636,7 +635,7 @@ void visit(varNode *it) override {
     void visit(memberVarExprNode *it) override {
         // 获取对象指针
         it->expr->accept((ASTVisitor&) *this);
-        Value* objPtr = lastValue;
+        Value* objPtr = it->expr->addr;
 	    auto classType = getValueType(objPtr);
 		if(!classType->isStructTy())
 			throw std::runtime_error(std::string (objPtr->getName()) + " is not a class instance");
@@ -650,167 +649,82 @@ void visit(varNode *it) override {
         Value* memberPtr = builder->CreateStructGEP(classType, objPtr, index);
 
         // 作为左值处理，返回指针
-        lastValue = memberPtr;
+        it->addr = memberPtr;
+		it->entity = memberPtr->getType();
     }
 
-	/**
-	 * functionExpr 和 functionDef 相关的llvm ir函数调用我实在不知道怎么搞了
-	 *
-	 */
     void visit(funcExprNode *it) override {
         // 1. 获取基本信息
         bool isMember = false;
         std::string funcName = it->name;
+        std::vector<Value*> args;
+		Function* func;
+
         if (currentClass != nullptr) {
             funcName = currentClass->getName().str() + "." + it->name;
             isMember = true;
         }
 
         // 2. 在模块中查找函数，先找成员函数，如果找不到则尝试全局。
-        Function* func = module->getFunction(funcName);
+		func = module->getFunction(funcName);
         if (!func) {
             func = module->getFunction(it->name);
             isMember = false;
-            if (!func) throw std::runtime_error("Function '" + funcName + "' not found.");
+			// 在内建函数中找函数
+			if(!func) {
+				func = getInlineFunction(it->name);
+	            if (!func) throw std::runtime_error("Function '" + funcName + "' not found.");
+			}
         }
-        
-        std::vector<Value*> args;
+
         // 添加this指针（如果是成员函数）。
-        if (isMember && currentClass) {
+        if (isMember) {
             if (thisPtr) args.push_back(thisPtr);
             else args.push_back(currentFunction->getArg(0));
         }
 
-        // 3. 准备参数列表
-        for (auto& argExpr : it->args) {
-            pushContext(false, true); // 参数作为右值访问
-            argExpr->accept((ASTVisitor&) *this);
-            popContext();
-            Value* argVal = lastValue; // 获取参数值
-
-            // 类型检查与转换：确保传递的参数类型与函数期望的参数类型匹配。
-            if (args.size() < func->getFunctionType()->getNumParams()) {
-                Type* expectedType = func->getFunctionType()->getParamType(args.size());
-                if (argVal->getType() != expectedType) {
-                    argVal = createTypeCast(argVal, expectedType);
-                    if (!argVal) {
-                        throw std::runtime_error("Type mismatch for argument " + std::to_string(args.size()) + 
-                                               " in call to '" + funcName + "'.");
-                    }
-                }
-            } 
-            else {
-                throw std::runtime_error("Too many arguments in call to '" + funcName + "'.");
-            }
-            args.push_back(argVal);
-        }
-
-        // 检查参数数量是否足够。
-        if (args.size() < func->getFunctionType()->getNumParams()) {
-             throw std::runtime_error("Too few arguments in call to '" + funcName + "'.");
-        }
-
-        // 4. 创建函数调用指令。
-        if (func->getReturnType()->isVoidTy()) {
-            builder->CreateCall(func, args);
-            lastValue = nullptr; // void 函数调用没有返回值
-        } else {
-            lastValue = builder->CreateCall(func, args, "calltmp"); // 非 void 函数调用，结果存入 lastValue
-        }
+		visitFuncExpr(it, args, func, funcName);
     }
 
      void visit(memberFuncExprNode *it) override {
-        // 1. 访问对象表达式 (it->obj)，获取对象实例的指针。
-        //    这会调用相应节点 (如 varNode, thisExprNode) 的 visit 方法，
-        //    并将结果存储在 lastValue 中。
-        //    这里我们期望得到的是对象的指针。
-        pushContext(false, true); // 对象本身作为右值访问，需要加载其值（如果它是个指针的指针等）
-        it->obj->accept((ASTVisitor&) *this);
-        popContext();
-        Value* objPtr = lastValue; // 获取对象指针
-    
-        // 确保 objPtr 是一个指针类型。
-        if (!objPtr->getType()->isPointerTy()) {
-            throw std::runtime_error("Object in member function call is not a pointer.");
-        }
-    
-        // 2. 从对象指针的类型中获取实际的类类型 (StructType)。
-        Type* objType = objPtr->getType()->getPointerElementType();
-        StructType* classType = dyn_cast<StructType>(objType);
-        if (!classType) {
-            throw std::runtime_error("Object in member function call is not a class instance.");
-        }
-        std::string className = classType->getName().str();
-    
-        // 3. 构建成员函数的修饰名 (mangled name)，通常是 "ClassName.methodName"。
-        std::string funcName = className + "." + it->methodName;
-    
-        // 4. 在 LLVM 模块中查找这个函数。
-        Function* func = module->getFunction(funcName);
-        if (!func) {
-            throw std::runtime_error("Member function '" + funcName + "' not found.");
-        }
-    
-        // 5. 准备函数调用的参数列表。
         std::vector<Value*> args;
-        // 第一个参数总是 'this' 指针，即对象实例的指针。
-        args.push_back(objPtr);
-    
-        // 遍历 AST 中的参数表达式节点。
-        unsigned argIdx = 1; // LLVM 函数参数从0开始，但我们已经加了 this，所以AST参数从1开始匹配
-        for (auto& argExpr : it->args) {
-            pushContext(false, true); // 参数作为右值访问
-            argExpr->accept((ASTVisitor&) *this);
-            popContext();
-            Value* argVal = lastValue; // 获取参数值
-    
-            // 类型检查与转换：确保传递的参数类型与函数期望的参数类型匹配。
-            if (argIdx < func->getFunctionType()->getNumParams()) {
-                Type* expectedType = func->getFunctionType()->getParamType(argIdx);
-                if (argVal->getType() != expectedType) {
-                    argVal = createTypeCast(argVal, expectedType); // createTypeCast 是一个辅助函数 (假设存在)
-                    if (!argVal) {
-                        throw std::runtime_error("Type mismatch for argument " + std::to_string(argIdx) + 
-                                               " in call to '" + funcName + "'.");
-                    }
-                }
-            } else {
-                // 参数数量不匹配，可以根据语言特性决定是否支持可变参数或报错
-                throw std::runtime_error("Too many arguments in call to '" + funcName + "'.");
-            }
-            args.push_back(argVal);
-            argIdx++;
-        }
-    
-        // 检查参数数量是否足够。
-        if (args.size() < func->getFunctionType()->getNumParams()) {
-             throw std::runtime_error("Too few arguments in call to '" + funcName + "'.");
-        }
-    
-        // 6. 创建函数调用指令。
-        if (func->getReturnType()->isVoidTy()) {
-            builder->CreateCall(func, args);
-            lastValue = nullptr; // void 函数调用没有返回值
-        } else {
-            lastValue = builder->CreateCall(func, args, "calltmp"); // 非 void 函数调用，结果存入 lastValue
-        }
+		Function* func;
+
+	     // 获取对象指针
+	     it->expr->accept((ASTVisitor&) *this);
+	     Value* objPtr = it->expr->addr;
+	     auto structType = (it->expr->entity);
+	     if(!structType->isStructTy())
+		     throw std::runtime_error(std::string (objPtr->getName()) + " is not a class instance");
+
+		 auto classType = static_cast<StructType *>(structType);
+
+		 std::string funcName = classType->getName().str() + "." + it->func->name;
+		// 2. 在模块中查找成员函数
+		func = module->getFunction(funcName);
+		if (!func) throw std::runtime_error(funcName + " is not a member of " + std::string(classType->getName()));
+
+		args.push_back(objPtr); // 刚才计算出的 this 指针
+
+		visitFuncExpr(it->func, args, func, funcName);
     }
 
     void visit(arrayExprNode *it) override {
         // 获取数组指针
         it->name->accept((ASTVisitor&) *this);
-        Value* arrayPtr = lastValue;
+        Value* arrayPtr = it->name->addr;
 
         // 获取索引
         it->index->accept((ASTVisitor&) *this);
-        Value* index = lastValue;
+        Value* index = it->index->addr;
 
         // 计算元素地址
-        Type* arrayType = getPointedType(arrayPtr->getType());
+        Type* arrayType = it->name->entity;
         Value* elemPtr = builder->CreateInBoundsGEP(
             arrayType, arrayPtr, {builder->getInt32(0), index});
 
-        lastValue = elemPtr;
+        it->addr = elemPtr;
+		it->entity = elemPtr->getType();
     }
 
     void visit(newExprNode *it) override {
@@ -824,9 +738,9 @@ void visit(varNode *it) override {
 			Value* lastSize = nullptr;
 			for(auto expr: it->exprs) {
 				expr->accept((ASTVisitor&) *this);
-				Value* curDimSize = lastValue;
+				Value* curDimSize = expr->addr;
 				if(lastSize == nullptr) lastSize = curDimSize;
-				else lastSize = builder->CreateMul(lastValue, curDimSize);
+				else lastSize = builder->CreateMul(lastSize, curDimSize);
 			}
 
             Value* arraySize = builder->CreateMul(
@@ -837,7 +751,8 @@ void visit(varNode *it) override {
             arrayPtr = builder->CreateBitCast(
                 arrayPtr, PointerType::get(baseType, 0));
 
-            lastValue = arrayPtr;
+            it->addr = arrayPtr;
+			it->entity = arrayPtr->getType();
         } else {
             // 对象分配
             Value* size = ConstantInt::get(
@@ -856,159 +771,163 @@ void visit(varNode *it) override {
 	                builder->CreateCall(ctor, {objPtr});
             }
 
-            lastValue = objPtr;
+            it->addr = objPtr;
+			it->entity = objPtr->getType();
         }
     }
 
     void visit(prefixUnaryExprNode *it) override {
         it->expr->accept((ASTVisitor&) *this);
-        Value* operand = lastValue;
+        Value* operand = it->expr->addr;
 
         switch (it->opCode) {
             case prefixUnaryExprNode::prefixOpType::Inc: {
                 Value* newVal = builder->CreateAdd(
                     operand, ConstantInt::get(operand->getType(), 1));
                 storeToLValue(it->expr, newVal);
-                lastValue = newVal;
+                it->addr = newVal;
                 break;
             }
             case prefixUnaryExprNode::prefixOpType::Dec: {
                 Value* newVal = builder->CreateSub(
                     operand, ConstantInt::get(operand->getType(), 1));
                 storeToLValue(it->expr, newVal);
-                lastValue = newVal;
+                it->addr = newVal;
                 break;
             }
             case prefixUnaryExprNode::prefixOpType::Not:
-                lastValue = builder->CreateNot(operand);
+                it->addr = builder->CreateNot(operand);
                 break;
             case prefixUnaryExprNode::prefixOpType::Inv:
-                lastValue = builder->CreateNeg(operand);
+                it->addr = builder->CreateNeg(operand);
                 break;
             case prefixUnaryExprNode::prefixOpType::Sub:
-                lastValue = builder->CreateNeg(operand);
+                it->addr = builder->CreateNeg(operand);
                 break;
             default:
                 throw std::runtime_error("Unsupported prefix operator");
         }
+		it->entity = it->expr->entity;
     }
 
     void visit(suffixUnaryExprNode *it) override {
         it->expr->accept((ASTVisitor&) *this);
-        Value* original = lastValue;
+        Value* original = it->expr->addr;
 
         switch (it->opCode) {
             case suffixUnaryExprNode::suffixOpType::Inc: {
                 Value* newVal = builder->CreateAdd(
                     original, ConstantInt::get(original->getType(), 1));
                 storeToLValue(it->expr, newVal);
-                lastValue = original;  // 后缀返回原始值
+                it->addr = original;  // 后缀返回原始值
                 break;
             }
             case suffixUnaryExprNode::suffixOpType::Dec: {
                 Value* newVal = builder->CreateSub(
                     original, ConstantInt::get(original->getType(), 1));
                 storeToLValue(it->expr, newVal);
-                lastValue = original;
+                it->addr = original;
                 break;
             }
             default:
                 throw std::runtime_error("Unsupported suffix operator");
         }
+		it->entity = it->expr->entity;
     }
 
     void visit(binaryExprNode *it) override {
 	    // 访问左操作数
         it->lhs->accept((ASTVisitor&) *this);
-        Value* lhs = lastValue;
+        Value* lhs = it->lhs->addr;
 
         // 访问右操作数
         it->rhs->accept((ASTVisitor&) *this);
-        Value* rhs = lastValue;
+        Value* rhs = it->rhs->addr;
 
-        // 类型提升：确保左右操作数类型一致
-        if (lhs->getType() != rhs->getType()) {
-            if (lhs->getType()->isIntegerTy() && rhs->getType()->isIntegerTy()) {
-                // 整数提升：将较小的整数类型提升到较大的类型
-                IntegerType* lhsInt = cast<IntegerType>(lhs->getType());
-                IntegerType* rhsInt = cast<IntegerType>(rhs->getType());
-                if (lhsInt->getBitWidth() > rhsInt->getBitWidth()) {
-                    rhs = builder->CreateIntCast(rhs, lhs->getType(), true, "cast");
-                } else {
-                    lhs = builder->CreateIntCast(lhs, rhs->getType(), true, "cast");
-                }
-            } else {
-                // 其他类型转换逻辑（例如整型转浮点等）
-                // 这里简化为错误
-                throw std::runtime_error("Type mismatch in binary operator");
-            }
-        }
+//        // 类型提升：确保左右操作数类型一致
+//        if (lhs->getType() != rhs->getType()) {
+//            if (it->lhs->entity->isIntegerTy() && it->rhs->entity->isIntegerTy()) {
+//                // 整数提升：将较小的整数类型提升到较大的类型
+//                IntegerType* lhsInt = cast<IntegerType>(lhs->getType());
+//                IntegerType* rhsInt = cast<IntegerType>(rhs->getType());
+//                if (lhsInt->getBitWidth() > rhsInt->getBitWidth()) {
+//                    rhs = builder->CreateIntCast(rhs, lhs->getType(), true, "cast");
+//                } else {
+//                    lhs = builder->CreateIntCast(lhs, rhs->getType(), true, "cast");
+//                }
+//            } else {
+//                // 其他类型转换逻辑（例如整型转浮点等）
+//                // 这里简化为错误
+//                throw std::runtime_error("Type mismatch in binary operator");
+//            }
+//        }
 
         // 生成操作
         switch (it->opCode) {
             case binaryExprNode::binaryOpType::Add:
-                lastValue = builder->CreateAdd(lhs, rhs, "addtmp");
+                it->addr = builder->CreateAdd(lhs, rhs, "addtmp");
                 break;
             case binaryExprNode::binaryOpType::Sub:
-                lastValue = builder->CreateSub(lhs, rhs, "subtmp");
+                it->addr = builder->CreateSub(lhs, rhs, "subtmp");
                 break;
             case binaryExprNode::binaryOpType::Mul:
-                lastValue = builder->CreateMul(lhs, rhs, "multmp");
+                it->addr = builder->CreateMul(lhs, rhs, "multmp");
                 break;
             case binaryExprNode::binaryOpType::Div:
-                lastValue = builder->CreateSDiv(lhs, rhs, "divtmp");
+                it->addr = builder->CreateSDiv(lhs, rhs, "divtmp");
                 break;
             case binaryExprNode::binaryOpType::Mod:
-                lastValue = builder->CreateSRem(lhs, rhs, "modtmp");
+                it->addr = builder->CreateSRem(lhs, rhs, "modtmp");
                 break;
             case binaryExprNode::binaryOpType::Eq:
-                lastValue = builder->CreateICmpEQ(lhs, rhs, "cmptmp");
+                it->addr = builder->CreateICmpEQ(lhs, rhs, "cmptmp");
                 break;
             case binaryExprNode::binaryOpType::Neq:
-                lastValue = builder->CreateICmpNE(lhs, rhs, "cmptmp");
+                it->addr = builder->CreateICmpNE(lhs, rhs, "cmptmp");
                 break;
             case binaryExprNode::binaryOpType::Le:
-                lastValue = builder->CreateICmpSLT(lhs, rhs, "cmptmp");
+                it->addr = builder->CreateICmpSLT(lhs, rhs, "cmptmp");
                 break;
             case binaryExprNode::binaryOpType::Ge:
-                lastValue = builder->CreateICmpSGT(lhs, rhs, "cmptmp");
+                it->addr = builder->CreateICmpSGT(lhs, rhs, "cmptmp");
                 break;
             case binaryExprNode::binaryOpType::Leq:
-                lastValue = builder->CreateICmpSLE(lhs, rhs, "cmptmp");
+                it->addr = builder->CreateICmpSLE(lhs, rhs, "cmptmp");
                 break;
             case binaryExprNode::binaryOpType::Geq:
-                lastValue = builder->CreateICmpSGE(lhs, rhs, "cmptmp");
+                it->addr = builder->CreateICmpSGE(lhs, rhs, "cmptmp");
                 break;
             case binaryExprNode::binaryOpType::And:
-                lastValue = builder->CreateAnd(lhs, rhs, "andtmp");
+                it->addr = builder->CreateAnd(lhs, rhs, "andtmp");
                 break;
             case binaryExprNode::binaryOpType::Or:
-                lastValue = builder->CreateOr(lhs, rhs, "ortmp");
+                it->addr = builder->CreateOr(lhs, rhs, "ortmp");
                 break;
             case binaryExprNode::binaryOpType::Bitand:
-                lastValue = builder->CreateAnd(lhs, rhs, "bitandtmp");
+                it->addr = builder->CreateAnd(lhs, rhs, "bitandtmp");
                 break;
             case binaryExprNode::binaryOpType::Bitor:
-                lastValue = builder->CreateOr(lhs, rhs, "bitortmp");
+                it->addr = builder->CreateOr(lhs, rhs, "bitortmp");
                 break;
             case binaryExprNode::binaryOpType::Bitxor:
-                lastValue = builder->CreateXor(lhs, rhs, "bitxortmp");
+                it->addr = builder->CreateXor(lhs, rhs, "bitxortmp");
                 break;
             case binaryExprNode::binaryOpType::Lshift:
-                lastValue = builder->CreateShl(lhs, rhs, "shltmp");
+                it->addr = builder->CreateShl(lhs, rhs, "shltmp");
                 break;
             case binaryExprNode::binaryOpType::Rshift:
-                lastValue = builder->CreateAShr(lhs, rhs, "ashrtmp"); // 算术右移
+                it->addr = builder->CreateAShr(lhs, rhs, "ashrtmp"); // 算术右移
                 break;
             default:
                 throw std::runtime_error("Unsupported binary operator");
         }
+		it->entity = it->lhs->entity;
     }
 
     void visit(ternaryExprNode *it) override {
         // 条件部分
         it->cond->accept((ASTVisitor&) *this);
-        Value* cond = lastValue;
+        Value* cond = it->cond->addr;
 
         // 创建基本块
         Function* func = builder->GetInsertBlock()->getParent();
@@ -1021,14 +940,14 @@ void visit(varNode *it) override {
         // then部分
         builder->SetInsertPoint(thenBB);
         it->thenExpr->accept((ASTVisitor&) *this);
-        Value* thenVal = lastValue;
+        Value* thenVal = it->thenExpr->addr;
         builder->CreateBr(mergeBB);
         thenBB = builder->GetInsertBlock(); // 更新thenBB，防止后面被修改
 
         // else部分
         builder->SetInsertPoint(elseBB);
         it->elseExpr->accept((ASTVisitor&) *this);
-        Value* elseVal = lastValue;
+        Value* elseVal = it->elseExpr->addr;
         builder->CreateBr(mergeBB);
         elseBB = builder->GetInsertBlock();
 
@@ -1040,26 +959,31 @@ void visit(varNode *it) override {
         PHINode* phi = builder->CreatePHI(resultType, 2, "phi");
         phi->addIncoming(thenVal, thenBB);
         phi->addIncoming(elseVal, elseBB);
-        lastValue = phi;
+        it->addr = phi;
+		it->entity = resultType;
     }
 
     void visit(boolNode *it) override {
-        lastValue = ConstantInt::get(Type::getInt1Ty(*context), it->val ? 1 : 0);
+        it->addr = ConstantInt::get(Type::getInt1Ty(*context), it->val ? 1 : 0);
+		it->entity = it->addr->getType();
     }
 
     void visit(numberNode *it) override {
         // 假设整数类型
-        lastValue = ConstantInt::get(Type::getInt32Ty(*context), it->val);
+        it->addr = ConstantInt::get(Type::getInt32Ty(*context), it->val);
+		it->entity = it->addr->getType();
     }
 
     void visit(strNode *it) override {
         // 创建全局字符串常量
         GlobalVariable* strConst = builder->CreateGlobalString(it->val, "str", 0, module.get());
-        lastValue = builder->CreateBitCast(strConst, PointerType::get(Type::getInt8Ty(*context), 0));
+        it->addr = builder->CreateBitCast(strConst, PointerType::get(Type::getInt8Ty(*context), 0));
+		it->entity = it->addr->getType();
     }
 
     void visit(nullNode *it) override {
-        lastValue = ConstantPointerNull::get(PointerType::get(Type::getInt8Ty(*context), 0));
+        it->addr = ConstantPointerNull::get(PointerType::get(Type::getInt8Ty(*context), 0));
+		it->entity = it->addr->getType();
     }
 
     void visit(typeNode *it) override {
@@ -1114,6 +1038,47 @@ private:
         return FunctionType::get(retType, paramTypes, false);
     }
 
+	void visitFuncExpr(funcExprNode* it, std::vector<Value*> &args, Function* func, const std::string& funcName) {
+
+		// 3. 准备参数列表
+        for (auto& argExpr : it->args) {
+            pushContext(false, true); // 参数作为右值访问
+            argExpr->accept((ASTVisitor&) *this);
+            popContext();
+            Value* argVal = argExpr->addr; // 获取参数值
+
+            // 类型检查与转换：确保传递的参数类型与函数期望的参数类型匹配。
+            if (args.size() < func->getFunctionType()->getNumParams()) {
+                Type* expectedType = func->getFunctionType()->getParamType(args.size());
+                if (argVal->getType() != expectedType) {
+                    argVal = createTypeCast(argVal, expectedType);
+                    if (!argVal) {
+                        throw std::runtime_error("Type mismatch for argument " + std::to_string(args.size()) +
+                                               " in call to '" + funcName + "'.");
+                    }
+                }
+            }
+            else {
+                throw std::runtime_error("Too many arguments in call to '" + funcName + "'.");
+            }
+            args.push_back(argVal);
+        }
+
+        // 检查参数数量是否足够。
+        if (args.size() < func->getFunctionType()->getNumParams()) {
+             throw std::runtime_error("Too few arguments in call to '" + funcName + "'.");
+        }
+
+        // 4. 创建函数调用指令。
+        if (func->getReturnType()->isVoidTy()) {
+            builder->CreateCall(func, args);
+            it->addr = nullptr; // void 函数调用没有返回值
+        } else {
+            it->addr = builder->CreateCall(func, args, "calltmp"); // 非 void 函数调用
+        }
+		it->entity = func->getReturnType();
+	}
+
     // 获取成员变量索引
     int getMemberIndex(llvm::StructType* structType, const std::string& name) {
 		NamedMDNode* classMD = module->getNamedMetadata("class." + structType->getName());
@@ -1132,15 +1097,8 @@ private:
     uint64_t getTypeSize(Type* type) {
         return module->getDataLayout().getTypeAllocSize(type);
     }
-    // 获取指针指向的类型
-    Type* getPointedType(Type* ptrType) {
-        return cast<PointerType>(ptrType)->getExtendedType(); // ????
-    }
-    // 获取存储类型的值类型（对于指针，获取指向的类型）
+    // 获取存储类型的值类型
     Type* getValueType(Value* val) {
-        if (val->getType()->isPointerTy()) {
-            return getPointedType(val->getType());
-        }
         return val->getType();
     }
     // 类型转换
@@ -1151,11 +1109,6 @@ private:
          // 处理整数类型转换
 	    if (targetType->isIntegerTy() && fromType->isIntegerTy()) {
 	        return builder->CreateIntCast(val, targetType, true, "cast");
-	    }
-
-	    // 处理浮点类型转换
-	    if (targetType->isFloatingPointTy() && fromType->isFloatingPointTy()) {
-	        return builder->CreateFPCast(val, targetType, "fcast");
 	    }
 
 	    // 处理指针类型转换
@@ -1175,20 +1128,41 @@ private:
 
     // 获取malloc函数
     Function* getMallocFunction() {
-        Function* func = module->getFunction("malloc");
+		return getFunc("malloc", PointerType::get(Type::getInt8Ty(*context), 0), Type::getInt64Ty(*context));
+    }
+	Function* getInlineFunction(const std::string &name) {
+		if(name == "print")
+			return getFunc("print", Type::getVoidTy(*context), PointerType::get(Type::getInt8Ty(*context), 0));
+		else if(name == "toString")
+			return getFunc("toString", PointerType::get(Type::getInt8Ty(*context), 0), Type::getInt32Ty(*context));
+		else if(name == "getInt")
+			return getFunc("getInt", Type::getInt32Ty(*context));
+		return nullptr;
+	}
+	// 获取特殊函数
+	template <class retType, class ...Args>
+	Function* getFunc(const std::string &name, retType retTypeRef, Args ...args) {
+		Function* func = module->getFunction(name);
         if (!func) {
-            Type* sizeType = Type::getInt64Ty(*context);
-            FunctionType* mallocType = FunctionType::get(
-                PointerType::get(Type::getInt8Ty(*context), 0), {sizeType}, false);
-            func = Function::Create(mallocType, GlobalValue::ExternalLinkage, "malloc", module.get());
+            FunctionType* funcType = FunctionType::get(retTypeRef, {args...}, false);
+            func = Function::Create(funcType, GlobalValue::ExternalLinkage, name, module.get());
         }
         return func;
-    }
+	}
+	template <class retType>
+	Function* getFunc(const std::string &name, retType retTypeRef) {
+		Function* func = module->getFunction(name);
+        if (!func) {
+            FunctionType* funcType = FunctionType::get(retTypeRef, false);
+            func = Function::Create(funcType, GlobalValue::ExternalLinkage, name, module.get());
+        }
+        return func;
+	}
     // 存储到左值（用于前缀和后缀++、--）
-    void storeToLValue(ASTNode* node, Value* value) {
+    void storeToLValue(ExprNode* node, Value* value) {
         // 左值表达式（如变量、成员访问、数组元素等）在访问时返回的是地址
         node->accept((ASTVisitor&) *this);
-        Value* ptr = lastValue;
+        Value* ptr = node->addr;
         builder->CreateStore(value, ptr);
     }
 

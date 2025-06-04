@@ -6,7 +6,7 @@
 
 class arrayExprNode : public ExprNode{
 public:
-    ExprNode *name; // 数组名称
+    ExprNode *name; // 生成数组地址的表达式
     ExprNode *index; // 计算数组索引的表达式
 
     arrayExprNode(ExprNode *name, ExprNode *index)
