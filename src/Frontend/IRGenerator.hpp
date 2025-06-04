@@ -286,47 +286,66 @@ public:
 
     void visit(varNode *it) override {
 	    throw std::runtime_error("currently we assume this cannot be visited");
-//	    // 查找变量
-//	    llvm::Value* varPtr = symbolTable.findValue(it->name);
-//
-//	    // 类成员处理
-//	    if (!varPtr && thisPtr && currentClass) {
-//	        int index = getMemberIndex(it->name);
-//	        if (index >= 0) {
-//	            // 使用结构体指针和索引获取成员的地址
-//	            varPtr = builder->CreateStructGEP(
-//	                currentClass,
-//	                thisPtr,
-//	                index,
-//	                it->name + ".addr"
-//	            );
-//	        }
-//	    }
-//
-//	    if (!varPtr) {
-//	        throw std::runtime_error("Undefined variable: " + it->name);
-//	    }
-//
-//		 // 验证变量指针类型
-//	    if (!varPtr->getType()->isPointerTy()) {
-//	        throw std::runtime_error("Variable " + it->name + " is not a pointer type");
-//	    }
-//
-//	    // 获取指针指向的元素类型
-//	    PointerType* ptrType = cast<PointerType>(varPtr->getType());
-//	    Type* elementType = getPointedType(ptrType);
-//
-//	    // 获取当前上下文
-//	    auto context = currentContext();
-//
-//	    // 在左值上下文或禁用加载时返回地址
-//	    if (context.isLValue || !context.isLoadAllowed) {
-//	        lastValue = varPtr;
-//	        return;
-//	    }
-//
-//	    // 否则加载值（右值上下文）
-//	    lastValue = builder->CreateLoad(elementType, varPtr, it->name + ".val");
+
+void visit(varNode *it) override {
+    // 获取当前的访问上下文（是左值还是右值，是否允许加载）。
+    AccessContext ctx = currentContext();
+
+    // 1. 尝试在符号表中查找局部变量或函数参数。
+    Value* val = symbolTable.findValue(it->name);
+    if (val) {
+        // 如果找到了局部变量/参数 (它是一个 AllocaInst，即地址)
+        if (ctx.isLValue) { // 如果是左值上下文，需要地址
+            lastValue = val; // 直接使用其地址
+        } else if (ctx.isLoadAllowed) { // 如果是右值上下文且允许加载
+            lastValue = builder->CreateLoad(val->getType()->getPointerElementType(), val, it->name.c_str()); // 加载该地址处的值
+        } else { // 右值上下文但不允许加载 (例如，在 &x 中 x 的情况，虽然不常见于此)
+            lastValue = val; // 仍然是地址
+        }
+        return; // 找到并处理完毕
+    }
+
+    // 2. 如果不是局部变量，并且当前在类方法中 (thisPtr 有效)，则尝试作为类成员查找。
+    if (thisPtr) {
+        StructType* classType = dyn_cast<StructType>(thisPtr->getType()->getPointerElementType());
+        if (classType) {
+            try {
+                // 获取成员变量在类结构中的索引。
+                int memberIdx = getMemberIndex(classType, it->name);
+                // 创建 GEP 指令获取成员变量的地址。
+                // 参数：类型，this指针，0（用于解引用this指针），成员索引。
+                Value* memberPtr = builder->CreateStructGEP(classType, thisPtr, memberIdx, it->name.c_str());
+                
+                if (ctx.isLValue) { // 左值上下文
+                    lastValue = memberPtr; // 结果是成员地址
+                } else if (ctx.isLoadAllowed) { // 右值上下文，允许加载
+                    lastValue = builder->CreateLoad(classType->getElementType(memberIdx), memberPtr, it->name.c_str()); // 加载成员的值
+                } else { // 右值上下文，不允许加载
+                    lastValue = memberPtr; // 结果是成员地址
+                }
+                return; // 找到并处理完毕
+            } catch (const std::runtime_error& e) {
+                // 成员未找到，继续尝试全局变量 (或者可以报错，取决于语言设计)
+            }
+        }
+    }
+
+    // 3. 尝试作为全局变量查找。
+    GlobalVariable* gVar = module->getNamedGlobal(it->name);
+    if (gVar) {
+        if (ctx.isLValue) { // 左值上下文
+            lastValue = gVar; // 全局变量本身就是指针 (地址)
+        } else if (ctx.isLoadAllowed) { // 右值上下文，允许加载
+            lastValue = builder->CreateLoad(gVar->getValueType(), gVar, it->name.c_str()); // 加载全局变量的值
+        } else { // 右值上下文，不允许加载
+            lastValue = gVar; // 结果是全局变量的地址
+        }
+        return; // 找到并处理完毕
+    }
+    
+    // 如果变量在任何地方都未找到，则抛出错误。
+    throw std::runtime_error("Undefined variable: " + it->name);
+}
 	}
 
     void visit(thisExprNode *it) override {
@@ -642,33 +661,81 @@ public:
 
 	 }
 
-    void visit(memberFuncExprNode *it) override {
-//        // 获取对象指针
-//        it->exprs->accept((ASTVisitor&) *this);
-//        Value* objPtr = lastValue;
-//
-//        // 成员函数调用
-//        std::string funcName = std::string(getPointedType(objPtr->getType())->getStructName()) + "." + it->func->name;
-//
-//        Value* funcVal = symbolTable.find(funcName);
-//        if (!funcVal) {
-//            throw std::runtime_error("Member function not found: " + funcName);
-//        }
-//
-//        // 准备参数（this指针+函数参数）
-//        std::vector<Value*> args;
-//        args.push_back(objPtr);  // this指针
-//
-//        for (auto& arg : it->func->args) {
-//            arg->accept((ASTVisitor&) *this);
-//            args.push_back(lastValue);
-//        }
-//
-//        // 调用函数
-//        FunctionType* funcType = cast<FunctionType>(
-//            cast<PointerType>(funcVal->getType())->getElementType());
-//
-//        lastValue = builder->CreateCall(funcType, funcVal, args);
+     void visit(memberFuncExprNode *it) override {
+        // 1. 访问对象表达式 (it->obj)，获取对象实例的指针。
+        //    这会调用相应节点 (如 varNode, thisExprNode) 的 visit 方法，
+        //    并将结果存储在 lastValue 中。
+        //    这里我们期望得到的是对象的指针。
+        pushContext(false, true); // 对象本身作为右值访问，需要加载其值（如果它是个指针的指针等）
+        it->obj->accept((ASTVisitor&) *this);
+        popContext();
+        Value* objPtr = lastValue; // 获取对象指针
+    
+        // 确保 objPtr 是一个指针类型。
+        if (!objPtr->getType()->isPointerTy()) {
+            throw std::runtime_error("Object in member function call is not a pointer.");
+        }
+    
+        // 2. 从对象指针的类型中获取实际的类类型 (StructType)。
+        Type* objType = objPtr->getType()->getPointerElementType();
+        StructType* classType = dyn_cast<StructType>(objType);
+        if (!classType) {
+            throw std::runtime_error("Object in member function call is not a class instance.");
+        }
+        std::string className = classType->getName().str();
+    
+        // 3. 构建成员函数的修饰名 (mangled name)，通常是 "ClassName.methodName"。
+        std::string funcName = className + "." + it->methodName;
+    
+        // 4. 在 LLVM 模块中查找这个函数。
+        Function* func = module->getFunction(funcName);
+        if (!func) {
+            throw std::runtime_error("Member function '" + funcName + "' not found.");
+        }
+    
+        // 5. 准备函数调用的参数列表。
+        std::vector<Value*> args;
+        // 第一个参数总是 'this' 指针，即对象实例的指针。
+        args.push_back(objPtr);
+    
+        // 遍历 AST 中的参数表达式节点。
+        unsigned argIdx = 1; // LLVM 函数参数从0开始，但我们已经加了 this，所以AST参数从1开始匹配
+        for (auto& argExpr : it->args) {
+            pushContext(false, true); // 参数作为右值访问
+            argExpr->accept((ASTVisitor&) *this);
+            popContext();
+            Value* argVal = lastValue; // 获取参数值
+    
+            // 类型检查与转换：确保传递的参数类型与函数期望的参数类型匹配。
+            if (argIdx < func->getFunctionType()->getNumParams()) {
+                Type* expectedType = func->getFunctionType()->getParamType(argIdx);
+                if (argVal->getType() != expectedType) {
+                    argVal = createTypeCast(argVal, expectedType); // createTypeCast 是一个辅助函数 (假设存在)
+                    if (!argVal) {
+                        throw std::runtime_error("Type mismatch for argument " + std::to_string(argIdx) + 
+                                               " in call to '" + funcName + "'.");
+                    }
+                }
+            } else {
+                // 参数数量不匹配，可以根据语言特性决定是否支持可变参数或报错
+                throw std::runtime_error("Too many arguments in call to '" + funcName + "'.");
+            }
+            args.push_back(argVal);
+            argIdx++;
+        }
+    
+        // 检查参数数量是否足够。
+        if (args.size() < func->getFunctionType()->getNumParams()) {
+             throw std::runtime_error("Too few arguments in call to '" + funcName + "'.");
+        }
+    
+        // 6. 创建函数调用指令。
+        if (func->getReturnType()->isVoidTy()) {
+            builder->CreateCall(func, args);
+            lastValue = nullptr; // void 函数调用没有返回值
+        } else {
+            lastValue = builder->CreateCall(func, args, "calltmp"); // 非 void 函数调用，结果存入 lastValue
+        }
     }
 
     void visit(arrayExprNode *it) override {
@@ -1047,21 +1114,7 @@ private:
 	    // 其他转换类型...
 	    throw std::runtime_error("Unsupported type conversion");
     }
-    // 获取成员变量索引
-//    int getMemberIndex(const std::string& memberName) {
-//        if (!currentClass) return -1;
-//        // 从类元数据获取成员变量索引
-//        NamedMDNode* classMD = module->getNamedMetadata("class." + currentClass->getName());
-//        if (!classMD || classMD->getNumOperands() == 0) return -1;
-//        MDString* str = cast<MDString>(classMD->getOperand(0)->getOperand(0));
-//        std::vector<std::string> memberNames = split(std::string(str->getString()), ',');
-//        for (int i = 0; i < memberNames.size(); ++i) {
-//            if (memberNames[i] == memberName) {
-//                return i;
-//            }
-//        }
-//        return -1;
-//    }
+
     // 获取malloc函数
     Function* getMallocFunction() {
         Function* func = module->getFunction("malloc");
