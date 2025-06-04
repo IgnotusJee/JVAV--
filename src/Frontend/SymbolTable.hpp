@@ -9,7 +9,7 @@
 class SymbolTable {
 private:
     struct Scope {
-        std::map<std::string, llvm::Value*> symbols;
+        std::map<std::string, std::pair<llvm::Value*, llvm::Type*> > symbols;
         std::map<std::string, llvm::Type*> types;
     };
 
@@ -30,9 +30,9 @@ public:
         }
     }
 
-    void addValue(const std::string& name, llvm::Value* value) {
+    void addValue(const std::string& name, llvm::Value* value, llvm::Type* vtype) {
         if (scopes.empty()) push();
-        scopes.back().symbols[name] = value;
+        scopes.back().symbols[name] = {value, vtype};
     }
 
     void addType(const std::string& name, llvm::Type* type) {
@@ -40,7 +40,7 @@ public:
         scopes.back().types[name] = type;
     }
 
-    llvm::Value* findValue(const std::string& name) {
+    std::pair<llvm::Value*, llvm::Type*> findValue(const std::string& name) {
     for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
         auto& scope = *it;
         auto entry = scope.symbols.find(name);
@@ -48,7 +48,7 @@ public:
             return entry->second;
         }
     }
-    return nullptr;
+    return {nullptr, nullptr};
 }
 
     llvm::Type* findType(const std::string& name) {

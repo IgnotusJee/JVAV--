@@ -164,7 +164,7 @@ public:
             // 第一个参数是this指针
             thisPtr = argIt++;
             thisPtr->setName("this");
-            symbolTable.addValue("this", thisPtr);
+            symbolTable.addValue("this", thisPtr, llvm::PointerType::get(currentClass, 0));
         }
 
         for (auto& param : it->param) {
@@ -174,7 +174,7 @@ public:
             auto* alloca = builder->CreateAlloca(
                 getType(param->typeName), nullptr, param->name);
             builder->CreateStore(arg, alloca);
-            symbolTable.addValue(param->name, alloca);
+            symbolTable.addValue(param->name, alloca, getType(param->typeName));
         }
 
         it->suite->accept((ASTVisitor &) *this);
@@ -208,8 +208,7 @@ public:
 				    nullptr,                // 初始值 (Constant*)
 				    var->name               // 变量名
 				);
-
-				symbolTable.addValue(var->name, globalVar);
+				symbolTable.addValue(var->name, globalVar, varType);
 			}
 		}
 		else {
@@ -240,13 +239,14 @@ public:
 		                llvm::Constant::getNullValue(varType), localVar);
             }
 
-            symbolTable.addValue(var->name, localVar);
+            symbolTable.addValue(var->name, localVar, varType);
         }
     }
 
 	void visit(varExprNode *it) override {
-		it->addr = symbolTable.findValue(it->name);
-		it->entity = it->addr->getType();
+        auto ret = symbolTable.findValue(it->name);
+		it->addr = ret.first;
+		it->entity = ret.second;
 	}
 
     void visit(assignExprNode *it) override {
@@ -844,6 +844,28 @@ public:
         it->rhs->accept((ASTVisitor&) *this);
         Value* rhs = it->rhs->addr;
 
+        std::cerr << "[assign] lhs: ";
+        if (lhs) lhs->print(llvm::errs());
+        else std::cerr << "null";
+        std::cerr << std::endl;
+        it->lhs->entity->print(llvm::errs());
+        std::cerr << std::endl;
+        
+        std::cerr << "[assign] rhs: ";
+        if (rhs) rhs->print(llvm::errs());
+        else std::cerr << "null";
+        std::cerr << std::endl;
+        it->rhs->entity->print(llvm::errs());
+        std::cerr << std::endl;
+
+        if (lhs && lhs->getType()->isPointerTy()) {
+            lhs = builder->CreateLoad(it->lhs->entity, lhs, "loadlhs");
+        }
+        if (rhs && rhs->getType()->isPointerTy()) {
+            rhs = builder->CreateLoad(it->rhs->entity, rhs, "loadrhs");
+        }
+
+
 //        // 类型提升：确保左右操作数类型一致
 //        if (lhs->getType() != rhs->getType()) {
 //            if (it->lhs->entity->isIntegerTy() && it->rhs->entity->isIntegerTy()) {
@@ -921,6 +943,10 @@ public:
             default:
                 throw std::runtime_error("Unsupported binary operator");
         }
+        std::cerr << "[assign] binaryExprNode: ";
+        if (it->addr) it->addr->print(llvm::errs());
+        else std::cerr << "null";
+        std::cerr << std::endl;
 		it->entity = it->lhs->entity;
     }
 
