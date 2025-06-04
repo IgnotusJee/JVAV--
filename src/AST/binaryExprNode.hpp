@@ -8,7 +8,7 @@
 class binaryExprNode : public ExprNode{
 public:
 
-    enum binaryOpType {
+    enum class binaryOpType {
         Mul, Div, Mod, Add, Sub,
         Lshift, Rshift, Le, Ge, Leq, Geq,
         Eq, Neq, Bitand, Bitxor, Bitor,

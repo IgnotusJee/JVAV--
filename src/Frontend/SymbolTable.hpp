@@ -1,10 +1,8 @@
 #pragma once
 
 #include <map>
-#include <ranges>
 #include <vector>
 #include <string>
-#include <ranges>
 
 #include <llvm/IR/Value.h>
 
@@ -43,22 +41,25 @@ public:
     }
 
     llvm::Value* findValue(const std::string& name) {
-        for (auto & scope : std::ranges::reverse_view(scopes)) {
-            auto entry = scope.symbols.find(name);
-            if (entry != scope.symbols.end()) {
-                return entry->second;
-            }
+    for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+        auto& scope = *it;
+        auto entry = scope.symbols.find(name);
+        if (entry != scope.symbols.end()) {
+            return entry->second;
         }
-        return nullptr;
     }
+    return nullptr;
+}
 
     llvm::Type* findType(const std::string& name) {
-        for (auto & scope : std::ranges::reverse_view(scopes)) {
-            auto entry = scope.types.find(name);
-            if (entry != scope.types.end()) {
-                return entry->second;
-            }
+    for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+        auto& scope = *it;
+        auto entry = scope.types.find(name);
+        if (entry != scope.types.end()) {
+            return entry->second;
         }
-        return nullptr;
     }
+    return nullptr;
+}
+
 };
