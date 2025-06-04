@@ -412,7 +412,7 @@ public:
 
     void visit(branchStmtNode *it) override {
         // 创建基本块
-        BasicBlock* mergeBB = BasicBlock::Create(*context, "if.merge");
+        BasicBlock* mergeBB = BasicBlock::Create(*context, "if.merge", currentFunction);
         std::vector<BasicBlock*> thenBlocks;
         std::vector<BasicBlock*> condBlocks;
 
@@ -424,7 +424,7 @@ public:
 
             // then块
             thenBlocks.push_back(BasicBlock::Create(
-                *context, "if.then." + std::to_string(i)));
+                *context, "if.then." + std::to_string(i), currentFunction));
         }
 
 		int elseBranch = it->Stmt.size() - it->cond.size();
@@ -433,7 +433,7 @@ public:
 
         // else块
         BasicBlock* elseBB = elseBranch ?
-            BasicBlock::Create(*context, "if.else") : mergeBB;
+            BasicBlock::Create(*context, "if.else", currentFunction) : mergeBB;
 
         // 初始跳转
         builder->CreateBr(condBlocks[0]);
@@ -481,8 +481,8 @@ public:
         // 创建基本块
         BasicBlock* condBB = BasicBlock::Create(
             *context, "while.cond", currentFunction);
-        BasicBlock* bodyBB = BasicBlock::Create(*context, "while.body");
-        BasicBlock* endBB = BasicBlock::Create(*context, "while.end");
+        BasicBlock* bodyBB = BasicBlock::Create(*context, "while.body", currentFunction);
+        BasicBlock* endBB = BasicBlock::Create(*context, "while.end", currentFunction);
 
         // 保存控制流状态
         controlStack.push({condBB, endBB, condBB});
@@ -522,9 +522,9 @@ public:
         // 创建基本块
         BasicBlock* condBB = BasicBlock::Create(
             *context, "for.cond", currentFunction);
-        BasicBlock* bodyBB = BasicBlock::Create(*context, "for.body");
-        BasicBlock* stepBB = BasicBlock::Create(*context, "for.step");
-        BasicBlock* endBB = BasicBlock::Create(*context, "for.end");
+        BasicBlock* bodyBB = BasicBlock::Create(*context, "for.body", currentFunction);
+        BasicBlock* stepBB = BasicBlock::Create(*context, "for.step", currentFunction);
+        BasicBlock* endBB = BasicBlock::Create(*context, "for.end", currentFunction);
 
         // 初始跳转
         builder->CreateBr(condBB);
@@ -576,9 +576,9 @@ public:
         // 创建基本块
         BasicBlock* condBB = BasicBlock::Create(
             *context, "for.cond", currentFunction);
-        BasicBlock* bodyBB = BasicBlock::Create(*context, "for.body");
-        BasicBlock* stepBB = BasicBlock::Create(*context, "for.step");
-        BasicBlock* endBB = BasicBlock::Create(*context, "for.end");
+        BasicBlock* bodyBB = BasicBlock::Create(*context, "for.body", currentFunction);
+        BasicBlock* stepBB = BasicBlock::Create(*context, "for.step", currentFunction);
+        BasicBlock* endBB = BasicBlock::Create(*context, "for.end", currentFunction);
 
         // 初始跳转
         builder->CreateBr(condBB);
@@ -958,8 +958,8 @@ public:
         // 创建基本块
         Function* func = builder->GetInsertBlock()->getParent();
         BasicBlock* thenBB = BasicBlock::Create(*context, "ternary.then", func);
-        BasicBlock* elseBB = BasicBlock::Create(*context, "ternary.else");
-        BasicBlock* mergeBB = BasicBlock::Create(*context, "ternary.merge");
+        BasicBlock* elseBB = BasicBlock::Create(*context, "ternary.else", func);
+        BasicBlock* mergeBB = BasicBlock::Create(*context, "ternary.merge", func);
 
         builder->CreateCondBr(cond, thenBB, elseBB);
 
