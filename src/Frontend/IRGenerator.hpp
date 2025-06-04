@@ -657,9 +657,67 @@ void visit(varNode *it) override {
 	 * functionExpr 和 functionDef 相关的llvm ir函数调用我实在不知道怎么搞了
 	 *
 	 */
-	 virtual void visit(funcExprNode *it) override {
+    void visit(funcExprNode *it) override {
+        // 1. 获取基本信息
+        bool isMember = false;
+        std::string funcName = it->name;
+        if (currentClass != nullptr) {
+            funcName = currentClass->getName().str() + "." + it->name;
+            isMember = true;
+        }
 
-	 }
+        // 2. 在模块中查找函数，先找成员函数，如果找不到则尝试全局。
+        Function* func = module->getFunction(funcName);
+        if (!func) {
+            func = module->getFunction(it->name);
+            isMember = false;
+            if (!func) throw std::runtime_error("Function '" + funcName + "' not found.");
+        }
+        
+        std::vector<Value*> args;
+        // 添加this指针（如果是成员函数）。
+        if (isMember && currentClass) {
+            if (thisPtr) args.push_back(thisPtr);
+            else args.push_back(currentFunction->getArg(0));
+        }
+
+        // 3. 准备参数列表
+        for (auto& argExpr : it->args) {
+            pushContext(false, true); // 参数作为右值访问
+            argExpr->accept((ASTVisitor&) *this);
+            popContext();
+            Value* argVal = lastValue; // 获取参数值
+
+            // 类型检查与转换：确保传递的参数类型与函数期望的参数类型匹配。
+            if (args.size() < func->getFunctionType()->getNumParams()) {
+                Type* expectedType = func->getFunctionType()->getParamType(args.size());
+                if (argVal->getType() != expectedType) {
+                    argVal = createTypeCast(argVal, expectedType);
+                    if (!argVal) {
+                        throw std::runtime_error("Type mismatch for argument " + std::to_string(args.size()) + 
+                                               " in call to '" + funcName + "'.");
+                    }
+                }
+            } 
+            else {
+                throw std::runtime_error("Too many arguments in call to '" + funcName + "'.");
+            }
+            args.push_back(argVal);
+        }
+
+        // 检查参数数量是否足够。
+        if (args.size() < func->getFunctionType()->getNumParams()) {
+             throw std::runtime_error("Too few arguments in call to '" + funcName + "'.");
+        }
+
+        // 4. 创建函数调用指令。
+        if (func->getReturnType()->isVoidTy()) {
+            builder->CreateCall(func, args);
+            lastValue = nullptr; // void 函数调用没有返回值
+        } else {
+            lastValue = builder->CreateCall(func, args, "calltmp"); // 非 void 函数调用，结果存入 lastValue
+        }
+    }
 
      void visit(memberFuncExprNode *it) override {
         // 1. 访问对象表达式 (it->obj)，获取对象实例的指针。
