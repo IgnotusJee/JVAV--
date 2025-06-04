@@ -205,7 +205,7 @@ public:
 				    varType,                       // 变量类型
 				    false,                // 是否为常量
 				    GlobalValue::LinkageTypes::ExternalLinkage, // 链接类型
-				    nullptr,                // 初始值 (Constant*)
+				    ConstantInt::get(varType, 0),                // 初始值 (Constant*)
 				    var->name               // 变量名
 				);
 				symbolTable.addValue(var->name, globalVar, varType);
@@ -779,18 +779,22 @@ public:
     void visit(prefixUnaryExprNode *it) override {
         it->expr->accept((ASTVisitor&) *this);
         Value* operand = it->expr->addr;
+		Type* opertype = it->expr->entity;
+
+		if(operand->getType()->isPointerTy())
+			operand = builder->CreateLoad(opertype, operand, "loadoperand");
 
         switch (it->opCode) {
             case prefixUnaryExprNode::prefixOpType::Inc: {
                 Value* newVal = builder->CreateAdd(
-                    operand, ConstantInt::get(operand->getType(), 1));
+                    operand, ConstantInt::get(opertype, 1));
                 storeToLValue(it->expr, newVal);
                 it->addr = newVal;
                 break;
             }
             case prefixUnaryExprNode::prefixOpType::Dec: {
                 Value* newVal = builder->CreateSub(
-                    operand, ConstantInt::get(operand->getType(), 1));
+                    operand, ConstantInt::get(opertype, 1));
                 storeToLValue(it->expr, newVal);
                 it->addr = newVal;
                 break;
@@ -813,18 +817,22 @@ public:
     void visit(suffixUnaryExprNode *it) override {
         it->expr->accept((ASTVisitor&) *this);
         Value* original = it->expr->addr;
+		Type* oritype = it->expr->entity;
+
+		if(original->getType()->isPointerTy())
+			original = builder->CreateLoad(oritype, original, "loadoriginal");
 
         switch (it->opCode) {
             case suffixUnaryExprNode::suffixOpType::Inc: {
                 Value* newVal = builder->CreateAdd(
-                    original, ConstantInt::get(original->getType(), 1));
+                    original, ConstantInt::get(oritype, 1));
                 storeToLValue(it->expr, newVal);
                 it->addr = original;  // 后缀返回原始值
                 break;
             }
             case suffixUnaryExprNode::suffixOpType::Dec: {
                 Value* newVal = builder->CreateSub(
-                    original, ConstantInt::get(original->getType(), 1));
+                    original, ConstantInt::get(oritype, 1));
                 storeToLValue(it->expr, newVal);
                 it->addr = original;
                 break;
@@ -943,10 +951,10 @@ public:
             default:
                 throw std::runtime_error("Unsupported binary operator");
         }
-        std::cerr << "[assign] binaryExprNode: ";
-        if (it->addr) it->addr->print(llvm::errs());
-        else std::cerr << "null";
-        std::cerr << std::endl;
+//        std::cerr << "[assign] binaryExprNode: ";
+//        if (it->addr) it->addr->print(llvm::errs());
+//        else std::cerr << "null";
+//        std::cerr << std::endl;
 		it->entity = it->lhs->entity;
     }
 
