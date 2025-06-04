@@ -136,7 +136,7 @@ public:
     }
 
     void visit(funcDefNode *it) override {
-        llvm::Type* retType = getType(it->typeName);
+        Type* retType = getType(it->typeName);
         std::vector<llvm::Type*> paramTypes;
 
         for (auto& param : it->param) {
@@ -149,14 +149,14 @@ public:
                 llvm::PointerType::get(currentClass, 0));
         }
 
-        auto* funcType = llvm::FunctionType::get(retType, paramTypes, false);
-        auto* func = llvm::Function::Create(funcType,
-            llvm::GlobalValue::ExternalLinkage,
+        auto* funcType = FunctionType::get(retType, paramTypes, false);
+        auto* func = Function::Create(funcType,
+            GlobalValue::ExternalLinkage,
             currentClass ? currentClass->getName().str() + "." + it->name : it->name,
             module.get());
 
         currentFunction = func;
-        auto* entryBB = llvm::BasicBlock::Create(*context, "entry", func);
+        auto* entryBB = BasicBlock::Create(*context, "entry", func);
         builder->SetInsertPoint(entryBB);
 
         // 设置参数名
