@@ -10,7 +10,7 @@ public:
     std::string name;
 
     varExprNode(std::string &name) : name(name) {
-        this->isAssign = true;
+        this->isLeftVal = true;
     }
 
     void accept(ASTVisitor &visitor) override {

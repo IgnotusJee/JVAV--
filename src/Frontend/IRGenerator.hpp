@@ -146,10 +146,18 @@ public:
                 llvm::PointerType::get(currentClass, 0));
         }
 
+		std::string funcName;
+		if(!currentClass) funcName = it->name;
+		else {
+			if(currentClass->getName().str() == it->name)
+				funcName = currentClass->getName().str() + "_ctor";
+			else funcName = currentClass->getName().str() + "." + it->name;
+		}
+
         auto* funcType = FunctionType::get(retType, paramTypes, false);
         auto* func = Function::Create(funcType,
             GlobalValue::ExternalLinkage,
-            currentClass ? currentClass->getName().str() + "." + it->name : it->name,
+            funcName,
             module.get());
 
         currentFunction = func;
@@ -244,9 +252,21 @@ public:
     }
 
 	void visit(varExprNode *it) override {
+		if(currentClass && thisPtr) {
+			auto [memberPtr, type] = getObjectMember(thisPtr, currentClass, it->name);
+			if(memberPtr) {
+				it->addr = memberPtr;
+				it->entity = type;
+				it->isLeftVal = true;
+				return;
+			}
+		}
         auto ret = symbolTable.findValue(it->name);
 		it->addr = ret.first;
 		it->entity = ret.second;
+		if(!it->addr | !it->entity)
+			throw std::runtime_error("Symbol \"" + it->name + "\" not found");
+		it->isLeftVal = true;
 	}
 
     void visit(assignExprNode *it) override {
@@ -254,15 +274,23 @@ public:
         it->rhs->accept((ASTVisitor&) *this);
         Value* rvalue = it->rhs->addr;
 
+		if(it->rhs->isLeftVal)
+			rvalue = builder->CreateLoad(it->rhs->entity, rvalue, "loadrhs");
+
         // 处理左值表达式
         it->lhs->accept((ASTVisitor&) *this);
         Value* lvalue = it->lhs->addr;
 
+		if(!it->lhs->isLeftVal)
+			throw std::runtime_error("Leftside of assign must be left value");
+
         // 存储值
         builder->CreateStore(rvalue, lvalue);
 
-        // 赋值表达式返回值是被赋的值
-        it->addr = rvalue;
+        // 赋值表达式返回值是左值
+        it->addr = lvalue;
+		it->entity = it->rhs->entity;
+		it->isLeftVal = true;
     }
 
     void visit(returnStmtNode *it) override {
@@ -352,6 +380,7 @@ public:
         }
         it->addr = thisPtr;
 		it->entity = currentClass;
+		it->isLeftVal = true;
     }
 
     void visit(paramNode *it) override {
@@ -636,21 +665,19 @@ public:
         // 获取对象指针
         it->expr->accept((ASTVisitor&) *this);
         Value* objPtr = it->expr->addr;
-	    auto classType = getValueType(objPtr);
+	    auto classType = it->expr->entity;
 		if(!classType->isStructTy())
 			throw std::runtime_error(std::string (objPtr->getName()) + " is not a class instance");
 
-        // 成员变量访问
-        int index = getMemberIndex(static_cast<StructType *>(classType), it->name);
-        if (index < 0) {
-            throw std::runtime_error("Member not found: " + it->name);
-        }
+        auto [memberPtr, memberType] = getObjectMember(objPtr, classType, it->name);
 
-        Value* memberPtr = builder->CreateStructGEP(classType, objPtr, index);
+		if(!memberPtr || !memberType)
+			throw std::runtime_error("\" " + it->name + "\" is not member of class \" " + classType->getStructName().str());
 
         // 作为左值处理，返回指针
         it->addr = memberPtr;
-		it->entity = memberPtr->getType();
+		it->entity = memberType;
+		it->isLeftVal = true;
     }
 
     void visit(funcExprNode *it) override {
@@ -680,7 +707,7 @@ public:
         // 添加this指针（如果是成员函数）。
         if (isMember) {
             if (thisPtr) args.push_back(thisPtr);
-            else args.push_back(currentFunction->getArg(0));
+            else throw std::runtime_error("No this pointer in member function");
         }
 
 		visitFuncExpr(it, args, func, funcName);
@@ -724,7 +751,8 @@ public:
             arrayType, arrayPtr, {builder->getInt32(0), index});
 
         it->addr = elemPtr;
-		it->entity = elemPtr->getType();
+		it->entity = arrayType;
+		it->isLeftVal = true;
     }
 
     void visit(newExprNode *it) override {
@@ -744,7 +772,7 @@ public:
 			}
 
             Value* arraySize = builder->CreateMul(
-                lastSize, ConstantInt::get(lastSize->getType(), getTypeSize(baseType)));
+                lastSize, ConstantInt::get(Type::getInt64Ty(*context), getTypeSize(baseType)));
             Value* arrayPtr = builder->CreateCall(mallocFunc, {arraySize});
 
             // 类型转换
@@ -756,7 +784,7 @@ public:
         } else {
             // 对象分配
             Value* size = ConstantInt::get(
-                Type::getInt32Ty(*context), getTypeSize(baseType));
+                Type::getInt64Ty(*context), getTypeSize(baseType));
 
             Value* objPtr = builder->CreateCall(mallocFunc, {size});
 
@@ -771,9 +799,10 @@ public:
 	                builder->CreateCall(ctor, {objPtr});
             }
 
-            it->addr = objPtr;
-			it->entity = objPtr->getType();
+            it->addr = builder->CreateLoad(baseType, objPtr, "loadobj");
+			it->entity = baseType;
         }
+		it->isLeftVal = false;
     }
 
     void visit(prefixUnaryExprNode *it) override {
@@ -812,6 +841,7 @@ public:
                 throw std::runtime_error("Unsupported prefix operator");
         }
 		it->entity = it->expr->entity;
+		it->isLeftVal = false;
     }
 
     void visit(suffixUnaryExprNode *it) override {
@@ -956,6 +986,7 @@ public:
 //        else std::cerr << "null";
 //        std::cerr << std::endl;
 		it->entity = it->lhs->entity;
+		it->isLeftVal = false;
     }
 
     void visit(ternaryExprNode *it) override {
@@ -995,17 +1026,20 @@ public:
         phi->addIncoming(elseVal, elseBB);
         it->addr = phi;
 		it->entity = resultType;
+		it->isLeftVal = false;
     }
 
     void visit(boolNode *it) override {
         it->addr = ConstantInt::get(Type::getInt1Ty(*context), it->val ? 1 : 0);
 		it->entity = it->addr->getType();
+		it->isLeftVal = false;
     }
 
     void visit(numberNode *it) override {
         // 假设整数类型
         it->addr = ConstantInt::get(Type::getInt32Ty(*context), it->val);
 		it->entity = it->addr->getType();
+		it->isLeftVal = false;
     }
 
     void visit(strNode *it) override {
@@ -1013,11 +1047,13 @@ public:
         GlobalVariable* strConst = builder->CreateGlobalString(it->val, "str", 0, module.get());
         it->addr = builder->CreateBitCast(strConst, PointerType::get(Type::getInt8Ty(*context), 0));
 		it->entity = it->addr->getType();
+		it->isLeftVal = false;
     }
 
     void visit(nullNode *it) override {
         it->addr = ConstantPointerNull::get(PointerType::get(Type::getInt8Ty(*context), 0));
 		it->entity = it->addr->getType();
+		it->isLeftVal = false;
     }
 
     void visit(typeNode *it) override {
@@ -1072,6 +1108,19 @@ private:
         return FunctionType::get(retType, paramTypes, false);
     }
 
+	std::tuple<Value*, Type*> getObjectMember(Value* objPtr, Type* classType, const std::string& memberName) {
+		auto structType = static_cast<StructType *>(classType);
+		int index = getMemberIndex(structType, memberName);
+        if (index < 0) {
+            return std::make_tuple((Value*) nullptr, (Type*) nullptr);
+        }
+
+		auto memberPtr = builder->CreateStructGEP(classType, objPtr, index);
+		auto memberType = structType->elements()[index];
+
+        return std::make_tuple(memberPtr, memberType);
+	}
+
 	void visitFuncExpr(funcExprNode* it, std::vector<Value*> &args, Function* func, const std::string& funcName) {
 
 		// 3. 准备参数列表
@@ -1114,6 +1163,7 @@ private:
             it->addr = builder->CreateCall(func, args, "calltmp"); // 非 void 函数调用
         }
 		it->entity = func->getReturnType();
+		it->isLeftVal = false;
 	}
 
     // 获取成员变量索引
@@ -1174,6 +1224,8 @@ private:
 			return getFunc("println", Type::getVoidTy(*context), PointerType::get(Type::getInt8Ty(*context), 0));
 		if(name == "printInt")
 			return getFunc("printInt", Type::getVoidTy(*context), Type::getInt32Ty(*context));
+		if(name == "printIntln")
+			return getFunc("printIntln", Type::getVoidTy(*context), Type::getInt32Ty(*context));
 		else if(name == "toString")
 			return getFunc("toString", PointerType::get(Type::getInt8Ty(*context), 0), Type::getInt32Ty(*context));
 		else if(name == "getInt")

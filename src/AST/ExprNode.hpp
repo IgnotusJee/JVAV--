@@ -12,12 +12,9 @@ public:
     AST::Type *name;
     llvm::Type* entity;
     llvm::Value* addr;
-    bool isAssign, getEntity;
+    bool isLeftVal;
 
-    ExprNode() :entity(nullptr), addr(nullptr) {
-        this->isAssign = false;
-        this->getEntity = true;
-    }
+    ExprNode() :name(nullptr), entity(nullptr), addr(nullptr), isLeftVal(false) {}
 
     std::string toString() const override {
         return "ExprNode";

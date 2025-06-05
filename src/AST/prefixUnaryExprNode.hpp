@@ -15,9 +15,7 @@ public:
     ExprNode *expr;
     prefixOpType opCode;
 
-    prefixUnaryExprNode(ExprNode *expr, prefixOpType opCode) : expr(expr), opCode(opCode) {
-        this->isAssign = true;
-    }
+    prefixUnaryExprNode(ExprNode *expr, prefixOpType opCode) : expr(expr), opCode(opCode) {}
 
     void accept(ASTVisitor &visitor) override {
         visitor.visit(this);

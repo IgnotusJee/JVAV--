@@ -10,9 +10,7 @@ public:
     ExprNode *index; // 计算数组索引的表达式
 
     arrayExprNode(ExprNode *name, ExprNode *index)
-        : name(name), index(index) {
-        this->isAssign = true;
-    }
+        : name(name), index(index) {}
 
     void accept(ASTVisitor &visitor) override {
         visitor.visit(this);

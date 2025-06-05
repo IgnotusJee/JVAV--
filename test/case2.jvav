@@ -1,4 +1,17 @@
+class op {
+    int val;
+    op() {
+        val = 114514;
+    }
+    void assign_and_print(int i) {
+        val = i+2;
+        printIntln(i);
+        printIntln(this.val);
+    }
+};
+
 int main() {
-    printInt(1);
+    op ooo = new op;
+    ooo.assign_and_print(123);
     return 0;
 }
