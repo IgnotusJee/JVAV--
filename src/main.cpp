@@ -14,8 +14,6 @@ void initThreads() {
 
 int main(int argc, const char* argv[]) {
 
-	assert(argc == 3);
-
     initThreads();
 
     const char* filepath = argv[1];
@@ -29,6 +27,8 @@ int main(int argc, const char* argv[]) {
     cout << parseTreeRoot->toStringTree(&parser) << endl;
     ASTBuilder astBuilder;
     rootNode *ASTRoot = dynamic_cast<rootNode*>(std::any_cast<ASTNode*>(astBuilder.visit(parseTreeRoot)));
-	generateIR(ASTRoot, std::string(argv[2]));
+	if(argc == 3)
+		generateIR(ASTRoot, std::string(argv[2]));
+	else generateIR(ASTRoot);
     return 0;
 }

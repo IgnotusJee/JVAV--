@@ -268,7 +268,7 @@ class ASTBuilder : public JvavParserBaseVisitor {
             return dynamic_cast<ASTNode*>(new numberNode(stoll(ctx->Number()->getText())));
         } 
         else if (ctx->Str() != nullptr) {
-            std::string str = ctx->Str()->getText().substr(1, ctx->Str()->getText().length() - 1);
+            std::string str = ctx->Str()->getText().substr(1, ctx->Str()->getText().length() - 2);
             return dynamic_cast<ASTNode*>(new strNode(str));
         } 
         else {

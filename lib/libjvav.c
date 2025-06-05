@@ -9,6 +9,10 @@ int getInt(void) {
 }
 
 void print(const char* str) {
+	printf("%s", str);
+}
+
+void println(const char* str) {
 	printf("%s\n", str);
 }
 
@@ -18,6 +22,6 @@ void printInt(int i) {
 
 char* toString(int i) {
 	char* str = malloc(20);
-	snprintf(str, 20, "%d", i);
+	snprintf(str, 20, "%d\000", i);
 	return str;
 }

@@ -212,7 +212,7 @@ public:
 			}
 		}
 		else {
-			throw std::runtime_error("unimplemented");
+			throw std::runtime_error("we current assume that this cannot be reached");
 		}
 	}
 
@@ -1085,7 +1085,7 @@ private:
             // 类型检查与转换：确保传递的参数类型与函数期望的参数类型匹配。
             if (args.size() < func->getFunctionType()->getNumParams()) {
                 Type* expectedType = func->getFunctionType()->getParamType(args.size());
-				if(argVal->getType()->isPointerTy())
+				if(argVal->getType()->isPointerTy() && !argType->isPointerTy())
 					argVal = builder->CreateLoad(argType, argVal, "loadarg");
                 if (argVal->getType() != expectedType) {
                     argVal = createTypeCast(argVal, expectedType);
@@ -1170,6 +1170,8 @@ private:
 	Function* getInlineFunction(const std::string &name) {
 		if(name == "print")
 			return getFunc("print", Type::getVoidTy(*context), PointerType::get(Type::getInt8Ty(*context), 0));
+		if(name == "println")
+			return getFunc("println", Type::getVoidTy(*context), PointerType::get(Type::getInt8Ty(*context), 0));
 		if(name == "printInt")
 			return getFunc("printInt", Type::getVoidTy(*context), Type::getInt32Ty(*context));
 		else if(name == "toString")
@@ -1262,5 +1264,17 @@ void generateIR(ASTNode* root, const std::string& out_path) {
 		std::error_code EC;
 		auto out = raw_fd_ostream(out_path, EC);
         generator.getModule()->print(out, nullptr);
+    }
+}
+
+void generateIR(ASTNode* root) {
+    IRGenerator generator;
+    root->accept((ASTVisitor &) generator);
+
+    // 验证并输出
+    if (verifyModule(*generator.getModule(), &errs())) {
+        errs() << "IR verification failed\n";
+    } else {
+        generator.getModule()->print(outs(), nullptr);
     }
 }
