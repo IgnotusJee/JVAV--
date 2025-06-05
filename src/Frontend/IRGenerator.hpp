@@ -179,10 +179,11 @@ public:
             auto* arg = argIt++;
             arg->setName(param->name);
 
-            auto* alloca = builder->CreateAlloca(
-                getType(param->typeName), nullptr, param->name);
+			bool isArray;
+			auto argType = getType(param->typeName, isArray);
+            auto* alloca = builder->CreateAlloca(argType, nullptr, param->name);
             builder->CreateStore(arg, alloca);
-            symbolTable.addValue(param->name, alloca, getType(param->typeName));
+            symbolTable.addValue(param->name, alloca, argType, isArray);
         }
 
         it->suite->accept((ASTVisitor &) *this);
@@ -204,19 +205,20 @@ public:
 	// 全局变量声明和类内部声明
 	void visit(varDefNode *it) override {
 		// 获取当前生成类型的 llvm 类型
-		llvm::Type* varType = getType(it->typeName);
+		bool isArray;
+		llvm::Type* varType = getType(it->typeName, isArray);
 
 		if(currentClass == nullptr) {
 			for (auto& var : it->var) {
 				auto globalVar = new GlobalVariable(
 				    *module,                    // 所属模块
-				    varType,                       // 变量类型
+				    isArray ? PointerType::get(varType, 0) : varType,                       // 变量类型
 				    false,                // 是否为常量
 				    GlobalValue::LinkageTypes::ExternalLinkage, // 链接类型
 				    ConstantInt::get(varType, 0),                // 初始值 (Constant*)
 				    var->name               // 变量名
 				);
-				symbolTable.addValue(var->name, globalVar, varType);
+				symbolTable.addValue(var->name, globalVar, varType, isArray);
 			}
 		}
 		else {
@@ -247,7 +249,13 @@ public:
 		                llvm::Constant::getNullValue(varType), localVar);
             }
 
-            symbolTable.addValue(var->name, localVar, varType);
+			bool isArray = false;
+			if(dynamic_cast<AST::arrayType*>(it->typeName->type)) {
+				isArray = true;
+				varType = getBasicType(dynamic_cast<AST::arrayType*>(it->typeName->type)->elemType);
+			}
+
+            symbolTable.addValue(var->name, localVar, varType, isArray);
         }
     }
 
@@ -261,12 +269,13 @@ public:
 				return;
 			}
 		}
-        auto ret = symbolTable.findValue(it->name);
-		it->addr = ret.first;
-		it->entity = ret.second;
+        auto [value, type, isArray] = symbolTable.findValue(it->name);
+		it->addr = value;
+		it->entity = type;
 		if(!it->addr | !it->entity)
 			throw std::runtime_error("Symbol \"" + it->name + "\" not found");
 		it->isLeftVal = true;
+		it->isArray = isArray;
 	}
 
     void visit(assignExprNode *it) override {
@@ -298,9 +307,14 @@ public:
             it->ret->accept((ASTVisitor&) *this);
 
 			Value* retVal = it->ret->addr;
+			Type* retType = it->ret->entity;
+
+			if(it->ret->isLeftVal)
+				retVal = builder->CreateLoad(retType, retVal, "loadreturn");
+
 			// 类型检查
             Type* expectedType = currentFunction->getReturnType();
-            if (retVal->getType() != expectedType) {
+            if (retType != expectedType) {
                 retVal = createTypeCast(retVal, expectedType);
             }
 
@@ -733,22 +747,27 @@ public:
 
 		args.push_back(objPtr); // 刚才计算出的 this 指针
 
-		visitFuncExpr(it->func, args, func, funcName);
+		visitFuncExpr(it->func, args, func, funcName, it);
     }
 
     void visit(arrayExprNode *it) override {
         // 获取数组指针
         it->name->accept((ASTVisitor&) *this);
         Value* arrayPtr = it->name->addr;
+		if(!it->name->isArray)
+			throw std::runtime_error("Not a array type");
 
         // 获取索引
         it->index->accept((ASTVisitor&) *this);
         Value* index = it->index->addr;
+		if(it->index->isLeftVal)
+			index = builder->CreateLoad(it->index->entity, index, "loadindex");
 
         // 计算元素地址
         Type* arrayType = it->name->entity;
+		arrayPtr = builder->CreateLoad(PointerType::get(arrayType, 0), arrayPtr, "loadarray");
         Value* elemPtr = builder->CreateInBoundsGEP(
-            arrayType, arrayPtr, {builder->getInt32(0), index});
+            arrayType, arrayPtr, {index});
 
         it->addr = elemPtr;
 		it->entity = arrayType;
@@ -772,7 +791,10 @@ public:
 			}
 
             Value* arraySize = builder->CreateMul(
-                lastSize, ConstantInt::get(Type::getInt64Ty(*context), getTypeSize(baseType)));
+                builder->CreateIntCast(lastSize, Type::getInt64Ty(*context), false),
+				ConstantInt::get(Type::getInt64Ty(*context), getTypeSize(baseType)));
+			if(getTypeSize(arraySize->getType()) != 8)
+				throw std::runtime_error("Incompatible malloc param");
             Value* arrayPtr = builder->CreateCall(mallocFunc, {arraySize});
 
             // 类型转换
@@ -780,7 +802,7 @@ public:
                 arrayPtr, PointerType::get(baseType, 0));
 
             it->addr = arrayPtr;
-			it->entity = arrayPtr->getType();
+			it->entity = baseType;
         } else {
             // 对象分配
             Value* size = ConstantInt::get(
@@ -993,6 +1015,8 @@ public:
         // 条件部分
         it->cond->accept((ASTVisitor&) *this);
         Value* cond = it->cond->addr;
+		if(it->cond->isLeftVal)
+			cond = builder->CreateLoad(it->cond->entity, cond, "loadcond");
 
         // 创建基本块
         Function* func = builder->GetInsertBlock()->getParent();
@@ -1006,6 +1030,8 @@ public:
         builder->SetInsertPoint(thenBB);
         it->thenExpr->accept((ASTVisitor&) *this);
         Value* thenVal = it->thenExpr->addr;
+		if(it->thenExpr->isLeftVal)
+			thenVal = builder->CreateLoad(it->thenExpr->entity, thenVal, "loadthen");
         builder->CreateBr(mergeBB);
         thenBB = builder->GetInsertBlock(); // 更新thenBB，防止后面被修改
 
@@ -1013,6 +1039,8 @@ public:
         builder->SetInsertPoint(elseBB);
         it->elseExpr->accept((ASTVisitor&) *this);
         Value* elseVal = it->elseExpr->addr;
+		if(it->elseExpr->isLeftVal)
+			elseVal = builder->CreateLoad(it->elseExpr->entity, elseVal, "loadelse");
         builder->CreateBr(mergeBB);
         elseBB = builder->GetInsertBlock();
 
@@ -1065,9 +1093,13 @@ public:
 private:
     // 获取LLVM类型
     Type* getType(typeNode* typeNode) {
-//        if (typeNode->isArray) {
-//            return ArrayType::get(getBasicType(typeNode), 0);
-//        }
+        return getBasicType(typeNode->type);
+    }
+	Type* getType(typeNode* typeNode, bool& isArray) {
+		if(dynamic_cast<AST::arrayType*>(typeNode->type)) {
+			isArray = true;
+			return getBasicType(dynamic_cast<AST::arrayType*>(typeNode->type)->elemType);
+		}
         return getBasicType(typeNode->type);
     }
 
@@ -1087,26 +1119,29 @@ private:
 		else if(dynamic_cast<AST::classType*>(type)) {
 			return symbolTable.findType(dynamic_cast<AST::classType*>(type)->className);
 		}
+		else if(dynamic_cast<AST::arrayType*>(type)) {
+			return PointerType::get(getBasicType(dynamic_cast<AST::arrayType*>(type)->elemType), 0);
+		}
         throw std::runtime_error("Unsupported type");
     }
 
     // 创建函数类型
-    FunctionType* createFunctionType(funcDefNode* func) {
-        Type* retType = getType(func->typeName);
-
-        std::vector<Type*> paramTypes;
-        for (auto& param : func->param) {
-            paramTypes.push_back(getType(param->typeName));
-        }
-
-        // 如果是类成员函数，添加this指针
-        if (currentClass) {
-            paramTypes.insert(paramTypes.begin(),
-                PointerType::get(currentClass, 0));
-        }
-
-        return FunctionType::get(retType, paramTypes, false);
-    }
+//    FunctionType* createFunctionType(funcDefNode* func) {
+//        Type* retType = getType(func->typeName);
+//
+//        std::vector<Type*> paramTypes;
+//        for (auto& param : func->param) {
+//            paramTypes.push_back(getType(param->typeName));
+//        }
+//
+//        // 如果是类成员函数，添加this指针
+//        if (currentClass) {
+//            paramTypes.insert(paramTypes.begin(),
+//                PointerType::get(currentClass, 0));
+//        }
+//
+//        return FunctionType::get(retType, paramTypes, false);
+//    }
 
 	std::tuple<Value*, Type*> getObjectMember(Value* objPtr, Type* classType, const std::string& memberName) {
 		auto structType = static_cast<StructType *>(classType);
@@ -1121,7 +1156,7 @@ private:
         return std::make_tuple(memberPtr, memberType);
 	}
 
-	void visitFuncExpr(funcExprNode* it, std::vector<Value*> &args, Function* func, const std::string& funcName) {
+	void visitFuncExpr(funcExprNode* it, std::vector<Value*> &args, Function* func, const std::string& funcName, memberFuncExprNode* fit= nullptr) {
 
 		// 3. 准备参数列表
         for (auto& argExpr : it->args) {
@@ -1156,14 +1191,26 @@ private:
         }
 
         // 4. 创建函数调用指令。
-        if (func->getReturnType()->isVoidTy()) {
-            builder->CreateCall(func, args);
-            it->addr = nullptr; // void 函数调用没有返回值
-        } else {
-            it->addr = builder->CreateCall(func, args, "calltmp"); // 非 void 函数调用
-        }
-		it->entity = func->getReturnType();
-		it->isLeftVal = false;
+		if(fit) {
+			if (func->getReturnType()->isVoidTy()) {
+	            builder->CreateCall(func, args);
+	            fit->addr = nullptr; // void 函数调用没有返回值
+	        } else {
+	            fit->addr = builder->CreateCall(func, args, "calltmp"); // 非 void 函数调用
+	        }
+			fit->entity = func->getReturnType();
+			fit->isLeftVal = false;
+		}
+		else {
+	        if (func->getReturnType()->isVoidTy()) {
+	            builder->CreateCall(func, args);
+	            it->addr = nullptr; // void 函数调用没有返回值
+	        } else {
+	            it->addr = builder->CreateCall(func, args, "calltmp"); // 非 void 函数调用
+	        }
+			it->entity = func->getReturnType();
+			it->isLeftVal = false;
+		}
 	}
 
     // 获取成员变量索引
@@ -1183,10 +1230,6 @@ private:
 	// 获取类型大小（字节数）
     uint64_t getTypeSize(Type* type) {
         return module->getDataLayout().getTypeAllocSize(type);
-    }
-    // 获取存储类型的值类型
-    Type* getValueType(Value* val) {
-        return val->getType();
     }
     // 类型转换
     Value* createTypeCast(Value* val, Type* targetType) {

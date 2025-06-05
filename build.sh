@@ -6,4 +6,4 @@ cd build
 cmake ..
 make -j8
 cd ..
-make out
+make all

@@ -1,5 +1,5 @@
 class op {
-    int val;
+    int val, ppp;
     op() {
         val = 114514;
     }
@@ -11,7 +11,10 @@ class op {
 };
 
 int main() {
-    op ooo = new op;
-    ooo.assign_and_print(123);
+    op[] ooo = new op[2];
+    ooo[0].assign_and_print(123);
+    ooo[1].assign_and_print(555);
+    printIntln(ooo[0].val);
+    printIntln(ooo[1].val);
     return 0;
 }
