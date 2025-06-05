@@ -5,6 +5,7 @@
 #include "JvavParser.h"
 #include "Frontend/ASTBuilder.hpp"
 #include "Frontend/IRGenerator.hpp"
+#include "Backend/ASMBuilder.hpp"
 using namespace antlr4;
 using namespace std;
 
@@ -27,8 +28,10 @@ int main(int argc, const char* argv[]) {
     cout << parseTreeRoot->toStringTree(&parser) << endl;
     ASTBuilder astBuilder;
     rootNode *ASTRoot = dynamic_cast<rootNode*>(std::any_cast<ASTNode*>(astBuilder.visit(parseTreeRoot)));
-	if(argc == 3)
-		generateIR(ASTRoot, std::string(argv[2]));
-	else generateIR(ASTRoot);
+	Module* jvavmodule;
+    string outpath(filepath);
+    jvavmodule = generateIR(ASTRoot, outpath.replace(outpath.length() - 5, 5, ".ll"));
+    emitRISCV32Assembly(jvavmodule, outpath.replace(outpath.length() - 3, 3, ".s"));
+
     return 0;
 }

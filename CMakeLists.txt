@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(jvav_parser)
+project(jvav_compiler)
 
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
 set(CMAKE_CXX_STANDARD 17)
@@ -42,9 +42,9 @@ file(GLOB_RECURSE SRC_FILES
     src/*/*/*.hpp
 )
 
-add_executable(jvav_parser ${SRC_FILES}
+add_executable(jvav_compiler ${SRC_FILES}
         src/Frontend/IRGenerator.hpp
         src/Frontend/SymbolTable.hpp)
 
 # Link antlr4 runtime and pthread
-target_link_libraries(jvav_parser PRIVATE antlr4-cpp-runtime Threads::Threads LLVM)
+target_link_libraries(jvav_compiler PRIVATE antlr4-cpp-runtime Threads::Threads LLVM)

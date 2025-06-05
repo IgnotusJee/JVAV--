@@ -4,7 +4,7 @@ test_case:
 	build/jvav_parser test/case3.jvav test/out.ll
 out:test_case
 	llc test/out.ll -filetype=obj -o out.o
-	clang out.o -o out -L. -ljvav -no-pie
+	clang out.o -o out -L. -ljvav -no-pie -Wl,-rpath=.
 	./out
 all: libjvav out
 clean:

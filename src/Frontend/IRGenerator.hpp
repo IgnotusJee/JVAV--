@@ -209,13 +209,15 @@ public:
 		llvm::Type* varType = getType(it->typeName, isArray);
 
 		if(currentClass == nullptr) {
+            Constant* zeroInit = Constant::getNullValue(varType);
 			for (auto& var : it->var) {
 				auto globalVar = new GlobalVariable(
 				    *module,                    // 所属模块
 				    isArray ? PointerType::get(varType, 0) : varType,                       // 变量类型
 				    false,                // 是否为常量
 				    GlobalValue::LinkageTypes::ExternalLinkage, // 链接类型
-				    ConstantInt::get(varType, 0),                // 初始值 (Constant*)
+                    zeroInit,
+				    // ConstantInt::get(varType, 0),                // 初始值 (Constant*)
 				    var->name               // 变量名
 				);
 				symbolTable.addValue(var->name, globalVar, varType, isArray);
@@ -1348,28 +1350,36 @@ private:
 };
 
 // 初始化
-void generateIR(ASTNode* root, const std::string& out_path) {
+Module* generateIR(ASTNode* root, const std::string& out_path) {
     IRGenerator generator;
     root->accept((ASTVisitor &) generator);
 
     // 验证并输出
     if (verifyModule(*generator.getModule(), &errs())) {
         errs() << "IR verification failed\n";
-    } else {
+        return nullptr;
+    } 
+    else {
 		std::error_code EC;
 		auto out = raw_fd_ostream(out_path, EC);
-        generator.getModule()->print(out, nullptr);
+        Module* jvavmodule = generator.getModule();
+        jvavmodule->print(out, nullptr);
+        return jvavmodule;
     }
 }
 
-void generateIR(ASTNode* root) {
+Module* generateIR(ASTNode* root) {
     IRGenerator generator;
     root->accept((ASTVisitor &) generator);
 
     // 验证并输出
     if (verifyModule(*generator.getModule(), &errs())) {
         errs() << "IR verification failed\n";
-    } else {
-        generator.getModule()->print(outs(), nullptr);
+        return nullptr;
+    } 
+    else {
+        Module* jvavmodule = generator.getModule();
+        jvavmodule->print(outs(), nullptr);
+        return jvavmodule;
     }
 }

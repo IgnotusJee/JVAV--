@@ -4,6 +4,6 @@ make clean
 mkdir build
 cd build
 cmake ..
-make -j8
+make -j
 cd ..
 make all
