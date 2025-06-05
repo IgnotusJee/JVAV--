@@ -1,56 +1,201 @@
-#include "llvm/IR/Module.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/IR/LegacyPassManager.h"
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/Instructions.h>
 
-static llvm::codegen::RegisterCodeGenFlags CGF;
+using namespace llvm;
 
-void emitRISCV32Assembly(llvm::Module *Module, const std::string &OutputFilename) {
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllTargetMCs();
-    llvm::InitializeAllAsmPrinters();
+class ASMBuilder {
 
-    std::string Triple = "riscv32-unknown-elf";
-    Module->setTargetTriple(Triple);
+    llvm::Module* module;
+    std::ofstream out;
+    int regCount = 0;
+    std::unordered_map<const llvm::Value*, std::string> valueToReg;
 
-    std::string Error;
-    const auto *Target = llvm::TargetRegistry::lookupTarget(Triple, Error);
-    if (!Target) {
-        llvm::errs() << "ERROR: " << Error << "\n";
-        return;
+public:
+    ASMBuilder(Module* m) : module(m) {}
+
+    void generate(const std::string& outputFile) {
+        out.open(outputFile);
+        if (!out.is_open()) {
+            errs() << "Failed to open output file: " << outputFile << "\n";
+            return;
+        }
+
+        emit(".text");
+        std::cout << "1" << '\n';
+        for (const auto& func : module->functions()) {
+            std::cout << "2" << '\n';
+            if (!func.isDeclaration()) {
+                emitFunction(func);
+            }
+        }
+        out.close();
     }
 
-    llvm::TargetOptions Options = llvm::codegen::InitTargetOptionsFromCodeGenFlags(llvm::Triple(Triple));
-    std::optional<llvm::Reloc::Model> RM = llvm::codegen::getExplicitRelocModel();
-    llvm::TargetMachine *TM = Target->createTargetMachine(
-        Triple,
-        llvm::codegen::getCPUStr(),
-        llvm::codegen::getFeaturesStr(),
-        Options,
-        RM
-    );
-
-    Module->setDataLayout(TM->createDataLayout());
-
-    std::error_code EC;
-    llvm::raw_fd_ostream Dest(OutputFilename, EC);
-    if (EC) {
-        llvm::errs() << "Could not open file: " << EC.message() << "\n";
-        return;
+    void emit(const std::string& line) {
+        out << "\t" << line << "\n";
     }
 
-    llvm::legacy::PassManager PM;
-    llvm::LLVMTargetMachine &LLVMTM = static_cast<llvm::LLVMTargetMachine&>(*TM);
-    if (LLVMTM.addPassesToEmitFile(
-            PM, Dest, nullptr, llvm::CodeGenFileType::AssemblyFile)) {
-        llvm::errs() << "Failed to generate assembly!\n";
-        return;
+    std::string freshReg() {
+        return "t" + std::to_string((regCount++) % 7); // use t0-t6
     }
 
-    PM.run(*Module);
-    Dest.flush();
-    llvm::outs() << "Successfully generated RISC-V assembly to: " << OutputFilename << "\n";
-}
+    std::string getReg(const Value* val) {
+        if (isa<ConstantInt>(val)) {
+            auto* ci = cast<ConstantInt>(val);
+            std::string reg = freshReg();
+            emit("li " + reg + ", " + std::to_string(ci->getSExtValue()));
+            return reg;
+        }
+        if (valueToReg.count(val)) return valueToReg[val];
+        auto reg = freshReg();
+        valueToReg[val] = reg;
+        return reg;
+    }
+
+    void emitFunction(const Function& func) {
+        valueToReg.clear();
+        regCount = 0;
+        out << func.getName().str() << ":\n";
+
+        for (const auto& bb : func) {
+            emitBasicBlock(bb);
+        }
+    }
+
+    void emitBasicBlock(const BasicBlock& bb) {
+        out << bb.getName().str() << ":\n";
+        for (const auto& inst : bb) {
+            emitInstruction(inst);
+        }
+    }
+
+    void emitInstruction(const Instruction& inst) {
+        switch (inst.getOpcode()) {
+            case Instruction::Add:
+                emitBinaryOp(inst, "add"); break;
+            case Instruction::Sub:
+                emitBinaryOp(inst, "sub"); break;
+            case Instruction::Mul:
+                emitBinaryOp(inst, "mul"); break;
+            case Instruction::SDiv:
+                emitBinaryOp(inst, "div"); break;
+            case Instruction::SRem:
+                emitBinaryOp(inst, "rem"); break;
+            case Instruction::And:
+                emitBinaryOp(inst, "and"); break;
+            case Instruction::Or:
+                emitBinaryOp(inst, "or"); break;
+            case Instruction::Xor:
+                emitBinaryOp(inst, "xor"); break;
+            case Instruction::Shl:
+                emitBinaryOp(inst, "sll"); break;
+            case Instruction::AShr:
+                emitBinaryOp(inst, "sra"); break;
+            case Instruction::ICmp: {
+                const auto* cmp = cast<ICmpInst>(&inst);
+                auto lhs = getReg(cmp->getOperand(0));
+                auto rhs = getReg(cmp->getOperand(1));
+                auto dst = getReg(cmp);
+                switch (cmp->getPredicate()) {
+                    case ICmpInst::ICMP_EQ:
+                        emit("xor " + dst + ", " + lhs + ", " + rhs);
+                        emit("seqz " + dst + ", " + dst);
+                        break;
+                    case ICmpInst::ICMP_NE:
+                        emit("xor " + dst + ", " + lhs + ", " + rhs);
+                        emit("snez " + dst + ", " + dst);
+                        break;
+                    case ICmpInst::ICMP_SLT:
+                        emit("slt " + dst + ", " + lhs + ", " + rhs);
+                        break;
+                    case ICmpInst::ICMP_SGT:
+                        emit("slt " + dst + ", " + rhs + ", " + lhs);
+                        break;
+                    case ICmpInst::ICMP_SLE:
+                        emit("slt " + dst + ", " + rhs + ", " + lhs);
+                        emit("xori " + dst + ", " + dst + ", 1");
+                        break;
+                    case ICmpInst::ICMP_SGE:
+                        emit("slt " + dst + ", " + lhs + ", " + rhs);
+                        emit("xori " + dst + ", " + dst + ", 1");
+                        break;
+                    default:
+                        emit("# unhandled icmp predicate");
+                        break;
+                }
+                break;
+            }
+            case Instruction::Alloca:
+                emitAlloca(cast<AllocaInst>(inst)); break;
+            case Instruction::Store:
+                emitStore(cast<StoreInst>(inst)); break;
+            case Instruction::Load:
+                emitLoad(cast<LoadInst>(inst)); break;
+            case Instruction::Ret:
+                emitReturn(cast<ReturnInst>(inst)); break;
+            case Instruction::Call:
+                emitCall(cast<CallInst>(inst)); break;
+            case Instruction::Br: {
+                auto* br = cast<BranchInst>(&inst);
+                if (br->isUnconditional()) {
+                    emit("j " + br->getSuccessor(0)->getName().str());
+                } else {
+                    auto cond = getReg(br->getCondition());
+                    emit("bnez " + cond + ", " + br->getSuccessor(0)->getName().str());
+                    emit("j " + br->getSuccessor(1)->getName().str());
+                }
+                break;
+            }
+            default:
+                emit("# unhandled: " + std::string(inst.getOpcodeName()));
+                break;
+        }
+    }
+
+    void emitBinaryOp(const Instruction& inst, const std::string& op) {
+        auto lhs = getReg(inst.getOperand(0));
+        auto rhs = getReg(inst.getOperand(1));
+        auto dst = getReg(&inst);
+        emit(op + " " + dst + ", " + lhs + ", " + rhs);
+    }
+
+    void emitAlloca(const AllocaInst& inst) {
+        emit("addi sp, sp, -4");
+        auto reg = getReg(&inst);
+        emit("mv " + reg + ", sp");
+    }
+
+    void emitStore(const StoreInst& inst) {
+        auto val = getReg(inst.getValueOperand());
+        auto ptr = getReg(inst.getPointerOperand());
+        emit("sw " + val + ", 0(" + ptr + ")");
+    }
+
+    void emitLoad(const LoadInst& inst) {
+        auto ptr = getReg(inst.getPointerOperand());
+        auto dst = getReg(&inst);
+        emit("lw " + dst + ", 0(" + ptr + ")");
+    }
+
+    void emitReturn(const ReturnInst& inst) {
+        if (inst.getReturnValue()) {
+            auto reg = getReg(inst.getReturnValue());
+            emit("mv a0, " + reg);
+        }
+        emit("ret");
+    }
+
+    void emitCall(const CallInst& inst) {
+        std::vector<std::string> argRegs;
+        for (unsigned i = 0; i < inst.arg_size(); ++i) {
+            auto reg = getReg(inst.getArgOperand(i));
+            emit("mv a" + std::to_string(i) + ", " + reg);
+        }
+        emit("call " + inst.getCalledFunction()->getName().str());
+        if (!inst.getType()->isVoidTy()) {
+            auto dst = getReg(&inst);
+            emit("mv " + dst + ", a0");
+        }
+    }
+
+};

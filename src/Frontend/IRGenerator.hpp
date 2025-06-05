@@ -74,7 +74,7 @@ public:
         : context(std::make_unique<LLVMContext>()),
           module(std::make_unique<Module>(moduleName, *context)),
           builder(new IRBuilder<>(*context)) {}
-
+    
     ~IRGenerator() override {
         delete builder;
     }
@@ -82,6 +82,22 @@ public:
 	auto getModule() const {
 		return module.get();
 	}
+
+    void outputIR(const std::string& out_path) {
+        if (verifyModule(*getModule(), &errs())) 
+            errs() << "IR verification failed\n";
+        else {
+            std::error_code EC;
+            auto out = raw_fd_ostream(out_path, EC);
+            getModule()->print(out, nullptr);
+        }
+    }
+
+    void outputIR() {
+        if (verifyModule(*getModule(), &errs()))
+            errs() << "IR verification failed\n";
+        else getModule()->print(outs(), nullptr);
+    }
 
 	// 进入新的访问上下文
     void pushContext(bool isLValue = false, bool isLoadAllowed = true) {
@@ -1348,38 +1364,3 @@ private:
     }
 
 };
-
-// 初始化
-Module* generateIR(ASTNode* root, const std::string& out_path) {
-    IRGenerator generator;
-    root->accept((ASTVisitor &) generator);
-
-    // 验证并输出
-    if (verifyModule(*generator.getModule(), &errs())) {
-        errs() << "IR verification failed\n";
-        return nullptr;
-    } 
-    else {
-		std::error_code EC;
-		auto out = raw_fd_ostream(out_path, EC);
-        Module* jvavmodule = generator.getModule();
-        jvavmodule->print(out, nullptr);
-        return jvavmodule;
-    }
-}
-
-Module* generateIR(ASTNode* root) {
-    IRGenerator generator;
-    root->accept((ASTVisitor &) generator);
-
-    // 验证并输出
-    if (verifyModule(*generator.getModule(), &errs())) {
-        errs() << "IR verification failed\n";
-        return nullptr;
-    } 
-    else {
-        Module* jvavmodule = generator.getModule();
-        jvavmodule->print(outs(), nullptr);
-        return jvavmodule;
-    }
-}

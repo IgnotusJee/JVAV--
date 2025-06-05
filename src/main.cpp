@@ -30,8 +30,11 @@ int main(int argc, const char* argv[]) {
     rootNode *ASTRoot = dynamic_cast<rootNode*>(std::any_cast<ASTNode*>(astBuilder.visit(parseTreeRoot)));
 	Module* jvavmodule;
     string outpath(filepath);
-    jvavmodule = generateIR(ASTRoot, outpath.replace(outpath.length() - 5, 5, ".ll"));
-    emitRISCV32Assembly(jvavmodule, outpath.replace(outpath.length() - 3, 3, ".s"));
+    IRGenerator irGenerator;
+    ASTRoot->accept((ASTVisitor &) irGenerator);
+    irGenerator.outputIR(outpath.replace(outpath.length() - 5, 5, ".ll"));
+    ASMBuilder asmBuilder(irGenerator.getModule());
+    asmBuilder.generate(outpath.replace(outpath.length() - 3, 3, ".s"));
 
     return 0;
 }
