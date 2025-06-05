@@ -1251,7 +1251,7 @@ private:
 };
 
 // 初始化
-void generateIR(ASTNode* root) {
+void generateIR(ASTNode* root, const std::string& out_path) {
     IRGenerator generator;
     root->accept((ASTVisitor &) generator);
 
@@ -1259,6 +1259,8 @@ void generateIR(ASTNode* root) {
     if (verifyModule(*generator.getModule(), &errs())) {
         errs() << "IR verification failed\n";
     } else {
-        generator.getModule()->print(outs(), nullptr);
+		std::error_code EC;
+		auto out = raw_fd_ostream(out_path, EC);
+        generator.getModule()->print(out, nullptr);
     }
 }

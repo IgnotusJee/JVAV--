@@ -4,3 +4,7 @@ cmake*
 .vscode
 Mx-Compiler
 .cache
+*.so
+*.o
+*.ll
+out
