@@ -7,4 +7,5 @@ Mx-Compiler
 *.so
 *.o
 *.ll
+*.s
 out
