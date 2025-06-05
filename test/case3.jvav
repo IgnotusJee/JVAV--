@@ -1,0 +1,48 @@
+int n;
+int m;
+int result;
+
+// 自定义一个函数
+int add(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    print("请输入两个整数:");
+    n = getInt();
+    m = getInt();
+    
+    result = add(n, m);
+    
+    print("两数之和为:");
+    printInt(result);
+    
+    // 判断奇偶
+    if (result % 2 == 0) {
+        print("是偶数");
+    } else {
+        print("是奇数");
+    }
+    
+    // for循环输出 1 ~ n
+    print("输出从 1 到 n 的所有数:");
+    int i;
+    for (i = 1; i <= n; i++) {
+        printInt(i);
+        print(" ");
+    }
+    
+    // while 循环输出 n 的阶乘
+    int factorial;
+    factorial = 1;
+    i = 1;
+    while (i <= n) {
+        factorial = factorial * i;
+        i++;
+    }
+    
+    print("n 的阶乘为:");
+    printInt(factorial);
+    
+    return 0;
+}
