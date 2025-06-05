@@ -20,10 +20,27 @@ public:
             return;
         }
 
+        emit(".data");
+        for (const auto& global : module->globals()) {
+            if (global.hasInitializer()) {
+                if (auto *ci = dyn_cast<ConstantInt>(global.getInitializer())) {
+                    out << global.getName().str() << ": .word " << ci->getSExtValue() << "\n";
+                } else if (auto *carr = dyn_cast<ConstantDataArray>(global.getInitializer())) {
+                    std::string data;
+                    for (unsigned i = 0; i < carr->getNumElements(); ++i) {
+                        char ch = carr->getElementAsInteger(i);
+                        data += (ch ? ch : ' ');
+                    }
+                    out << global.getName().str() << ": .asciz \"" << data << "\"\n";
+                }
+            } else {
+                out << global.getName().str() << ": .word 0\n";
+            }
+        }
+
         emit(".text");
-        std::cout << "1" << '\n';
+        emit(".globl main");
         for (const auto& func : module->functions()) {
-            std::cout << "2" << '\n';
             if (!func.isDeclaration()) {
                 emitFunction(func);
             }
@@ -44,6 +61,12 @@ public:
             auto* ci = cast<ConstantInt>(val);
             std::string reg = freshReg();
             emit("li " + reg + ", " + std::to_string(ci->getSExtValue()));
+            return reg;
+        }
+        if (isa<GlobalVariable>(val)) {
+            std::string reg = freshReg();
+            emit("la " + reg + ", " + val->getName().str());
+            valueToReg[val] = reg;
             return reg;
         }
         if (valueToReg.count(val)) return valueToReg[val];
@@ -186,7 +209,6 @@ public:
     }
 
     void emitCall(const CallInst& inst) {
-        std::vector<std::string> argRegs;
         for (unsigned i = 0; i < inst.arg_size(); ++i) {
             auto reg = getReg(inst.getArgOperand(i));
             emit("mv a" + std::to_string(i) + ", " + reg);
