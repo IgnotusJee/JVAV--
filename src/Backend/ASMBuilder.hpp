@@ -4,11 +4,15 @@
 using namespace llvm;
 
 class ASMBuilder {
-
     llvm::Module* module;
     std::ofstream out;
     int regCount = 0;
     std::unordered_map<const llvm::Value*, std::string> valueToReg;
+    
+    unsigned stackSize;
+    unsigned calleeSaved;
+    unsigned localSize;
+    int nextParamOffset; // 用于追踪栈传递参数的偏移量
 
 public:
     ASMBuilder(Module* m) : module(m) {}
@@ -78,7 +82,51 @@ public:
     void emitFunction(const Function& func) {
         valueToReg.clear();
         regCount = 0;
+        
+        // 计算局部变量空间
+        localSize = 0;
+        for (const auto& bb : func) {
+            for (const auto& inst : bb) {
+                if (isa<AllocaInst>(&inst)) {
+                    localSize += 4; // 每个alloca分配4字节
+                }
+            }
+        }
+        
+        // 计算栈传递参数的空间（超过8个参数的情况）
+        int numParams = func.arg_size();
+        int stackParamSpace = (numParams > 8) ? (numParams - 8) * 4 : 0;
+        
+        calleeSaved = 8; // ra和s0各占4字节
+        stackSize = calleeSaved + localSize + stackParamSpace;
+        stackSize = (stackSize + 15) / 16 * 16; // 16字节对齐
+
+        nextParamOffset = stackSize - 8; // 栈传递参数的起始位置（在保存区之上）
+
         out << func.getName().str() << ":\n";
+        
+        // 函数prologue
+        emit("addi sp, sp, -" + std::to_string(stackSize));
+        emit("sw ra, " + std::to_string(stackSize - 4) + "(sp)");
+        emit("sw s0, " + std::to_string(stackSize - 8) + "(sp)");
+        emit("addi s0, sp, " + std::to_string(stackSize));
+        
+        // 正确获取函数参数
+        int paramCount = 0;
+        for (const Argument& arg : func.args()) {
+            std::string reg = freshReg();
+            valueToReg[&arg] = reg;
+            
+            if (paramCount < 8) {
+                // 前8个参数从a0-a7寄存器获取
+                emit("mv " + reg + ", a" + std::to_string(paramCount));
+            } else {
+                // 第9个及以后的参数从栈上获取
+                int offset = nextParamOffset + (paramCount - 8) * 4;
+                emit("lw " + reg + ", " + std::to_string(offset) + "(s0)");
+            }
+            paramCount++;
+        }
 
         for (const auto& bb : func) {
             emitBasicBlock(bb);
@@ -86,8 +134,8 @@ public:
     }
 
     void emitBasicBlock(const BasicBlock& bb) {
-		if(bb.getName().str() != "entry")
-	        out << bb.getName().str() << ":\n";
+        if(bb.getName().str() != "entry")
+            out << bb.getName().str() << ":\n";
         for (const auto& inst : bb) {
             emitInstruction(inst);
         }
@@ -184,9 +232,10 @@ public:
     }
 
     void emitAlloca(const AllocaInst& inst) {
-        emit("addi sp, sp, -4");
+        static int offset = -calleeSaved - 4;
+        offset -= 4;
         auto reg = getReg(&inst);
-        emit("mv " + reg + ", sp");
+        emit("addi " + reg + ", s0, " + std::to_string(offset));
     }
 
     void emitStore(const StoreInst& inst) {
@@ -206,19 +255,43 @@ public:
             auto reg = getReg(inst.getReturnValue());
             emit("mv a0, " + reg);
         }
+        emit("lw ra, " + std::to_string(stackSize - 4) + "(sp)");
+        emit("lw s0, " + std::to_string(stackSize - 8) + "(sp)");
+        emit("addi sp, sp, " + std::to_string(stackSize));
         emit("ret");
     }
 
     void emitCall(const CallInst& inst) {
+        // 保存可能被破坏的临时寄存器（简单实现）
+        emit("# Save temporary registers");
+        int savedRegs = 0;
+        std::vector<std::string> saved;
+        for (int i = 0; i < 7; i++) {
+            std::string reg = "t" + std::to_string(i);
+            emit("sw " + reg + ", " + std::to_string(i * 4) + "(sp)");
+            saved.push_back(reg);
+            savedRegs++;
+        }
+        
+        // 传递参数
         for (unsigned i = 0; i < inst.arg_size(); ++i) {
             auto reg = getReg(inst.getArgOperand(i));
             emit("mv a" + std::to_string(i) + ", " + reg);
         }
+        
+        // 调用函数
         emit("call " + inst.getCalledFunction()->getName().str());
+        
+        // 恢复临时寄存器
+        emit("# Restore temporary registers");
+        for (int i = savedRegs - 1; i >= 0; i--) {
+            emit("lw " + saved[i] + ", " + std::to_string(i * 4) + "(sp)");
+        }
+        
+        // 处理返回值
         if (!inst.getType()->isVoidTy()) {
             auto dst = getReg(&inst);
             emit("mv " + dst + ", a0");
         }
     }
-
 };
