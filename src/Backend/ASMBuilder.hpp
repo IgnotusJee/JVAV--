@@ -86,7 +86,8 @@ public:
     }
 
     void emitBasicBlock(const BasicBlock& bb) {
-        out << bb.getName().str() << ":\n";
+		if(bb.getName().str() != "entry")
+	        out << bb.getName().str() << ":\n";
         for (const auto& inst : bb) {
             emitInstruction(inst);
         }

@@ -449,9 +449,16 @@ public:
         // 添加类元数据（成员名称映射）
 		module->getOrInsertNamedMetadata("class." + it->name)->addOperand(classMetadata);
 
+        // 处理构造函数
+        for (auto& func : it->funcDef) {
+			if(func->name == it->name)
+	            func->accept((ASTVisitor&) *this);
+        }
+
         // 处理成员函数
         for (auto& func : it->funcDef) {
-            func->accept((ASTVisitor&) *this);
+			if(func->name != it->name)
+	            func->accept((ASTVisitor&) *this);
         }
 
         // 恢复类上下文
