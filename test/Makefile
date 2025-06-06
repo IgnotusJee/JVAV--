@@ -1,7 +1,7 @@
 dylibjvav: ../lib/libjvav.c ../lib/libjvav.h
 	 riscv64-unknown-linux-gnu-gcc -fPIC -shared -o libjvav.so ../lib/libjvav.c
 libjvav: ../lib/libjvav.c ../lib/libjvav.h
-	 riscv64-unknown-linux-gnu-gcc -c -o libjvav.o ../lib/libjvav.c -mabi=lp64 -static
+	 riscv64-unknown-linux-gnu-gcc -c -o ./libjvav.o ../lib/libjvav.c -mabi=lp64 -static
 	 riscv64-unknown-linux-gnu-ar -crv -f libjvav.a libjvav.o
 x86libjvav: ../lib/libjvav.c ../lib/libjvav.h
 	gcc -fPIC -shared -o libjvavx86.so ../lib/libjvav.c

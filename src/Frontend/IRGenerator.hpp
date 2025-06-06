@@ -62,13 +62,6 @@ class IRGenerator : public ASTVisitor {
     StructType* currentClass = nullptr;
     Value* thisPtr = nullptr;
 
-	struct AccessContext {
-        bool isLValue = false;   // 是否在左值上下文（需要地址）
-        bool isLoadAllowed = true; // 是否允许加载值
-    };
-
-    std::vector<AccessContext> contextStack;  // 上下文堆栈
-
 public:
     explicit IRGenerator(const std::string& moduleName = "jvav_module")
         : context(std::make_unique<LLVMContext>()),
@@ -83,7 +76,7 @@ public:
 		return module.get();
 	}
 
-    void outputIR(const std::string& out_path) {
+    void outputIR(const std::string& out_path) const {
         if (verifyModule(*getModule(), &errs())) 
             errs() << "IR verification failed\n";
         else {
@@ -93,44 +86,10 @@ public:
         }
     }
 
-    void outputIR() {
+    void outputIR() const {
         if (verifyModule(*getModule(), &errs()))
             errs() << "IR verification failed\n";
         else getModule()->print(outs(), nullptr);
-    }
-
-	// 进入新的访问上下文
-    void pushContext(bool isLValue = false, bool isLoadAllowed = true) {
-        contextStack.push_back({isLValue, isLoadAllowed});
-    }
-
-    // 退出当前访问上下文
-    void popContext() {
-        if (!contextStack.empty()) {
-            contextStack.pop_back();
-        }
-    }
-
-    // 获取当前上下文
-    AccessContext currentContext() const {
-        if (!contextStack.empty()) {
-            return contextStack.back();
-        }
-        return {false, true};  // 默认上下文
-    }
-
-    // 在左值上下文中访问表达式（获取地址）
-    void accessLValue(ASTNode* node) {
-        pushContext(true, false);  // 左值上下文，不允许加载
-        node->accept((ASTVisitor &) *this);
-        popContext();
-    }
-
-    // 在右值上下文中访问表达式（获取值）
-    void accessRValue(ASTNode* node) {
-        pushContext(false, true);  // 右值上下文，允许加载
-        node->accept((ASTVisitor &) *this);
-        popContext();
     }
 
     // 访问者接口实现
@@ -344,66 +303,6 @@ public:
 
     void visit(varNode *it) override {
 	    throw std::runtime_error("currently we assume this cannot be visited");
-
-//void visit(varNode *it) override {
-//    // 获取当前的访问上下文（是左值还是右值，是否允许加载）。
-//    AccessContext ctx = currentContext();
-//
-//    // 1. 尝试在符号表中查找局部变量或函数参数。
-//    Value* val = symbolTable.findValue(it->name);
-//    if (val) {
-//        // 如果找到了局部变量/参数 (它是一个 AllocaInst，即地址)
-//        if (ctx.isLValue) { // 如果是左值上下文，需要地址
-//            lastValue = val; // 直接使用其地址
-//        } else if (ctx.isLoadAllowed) { // 如果是右值上下文且允许加载
-//            lastValue = builder->CreateLoad(val->getType()->getPointerElementType(), val, it->name.c_str()); // 加载该地址处的值
-//        } else { // 右值上下文但不允许加载 (例如，在 &x 中 x 的情况，虽然不常见于此)
-//            lastValue = val; // 仍然是地址
-//        }
-//        return; // 找到并处理完毕
-//    }
-//
-//    // 2. 如果不是局部变量，并且当前在类方法中 (thisPtr 有效)，则尝试作为类成员查找。
-//    if (thisPtr) {
-//        StructType* classType = dyn_cast<StructType>(thisPtr->getType()->getPointerElementType());
-//        if (classType) {
-//            try {
-//                // 获取成员变量在类结构中的索引。
-//                int memberIdx = getMemberIndex(classType, it->name);
-//                // 创建 GEP 指令获取成员变量的地址。
-//                // 参数：类型，this指针，0（用于解引用this指针），成员索引。
-//                Value* memberPtr = builder->CreateStructGEP(classType, thisPtr, memberIdx, it->name.c_str());
-//
-//                if (ctx.isLValue) { // 左值上下文
-//                    lastValue = memberPtr; // 结果是成员地址
-//                } else if (ctx.isLoadAllowed) { // 右值上下文，允许加载
-//                    lastValue = builder->CreateLoad(classType->getElementType(memberIdx), memberPtr, it->name.c_str()); // 加载成员的值
-//                } else { // 右值上下文，不允许加载
-//                    lastValue = memberPtr; // 结果是成员地址
-//                }
-//                return; // 找到并处理完毕
-//            } catch (const std::runtime_error& e) {
-//                // 成员未找到，继续尝试全局变量 (或者可以报错，取决于语言设计)
-//            }
-//        }
-//    }
-//
-//    // 3. 尝试作为全局变量查找。
-//    GlobalVariable* gVar = module->getNamedGlobal(it->name);
-//    if (gVar) {
-//        if (ctx.isLValue) { // 左值上下文
-//            lastValue = gVar; // 全局变量本身就是指针 (地址)
-//        } else if (ctx.isLoadAllowed) { // 右值上下文，允许加载
-//            lastValue = builder->CreateLoad(gVar->getValueType(), gVar, it->name.c_str()); // 加载全局变量的值
-//        } else { // 右值上下文，不允许加载
-//            lastValue = gVar; // 结果是全局变量的地址
-//        }
-//        return; // 找到并处理完毕
-//    }
-//
-//    // 如果变量在任何地方都未找到，则抛出错误。
-//    throw std::runtime_error("Undefined variable: " + it->name);
-//}
 	}
 
     void visit(thisExprNode *it) override {
@@ -929,45 +828,12 @@ public:
         it->rhs->accept((ASTVisitor&) *this);
         Value* rhs = it->rhs->addr;
 
-//        std::cerr << "[assign] lhs: ";
-//        if (lhs) lhs->print(llvm::errs());
-//        else std::cerr << "null";
-//        std::cerr << std::endl;
-//        it->lhs->entity->print(llvm::errs());
-//        std::cerr << std::endl;
-//
-//        std::cerr << "[assign] rhs: ";
-//        if (rhs) rhs->print(llvm::errs());
-//        else std::cerr << "null";
-//        std::cerr << std::endl;
-//        it->rhs->entity->print(llvm::errs());
-//        std::cerr << std::endl;
-
         if (lhs && lhs->getType()->isPointerTy()) {
             lhs = builder->CreateLoad(it->lhs->entity, lhs, "loadlhs");
         }
         if (rhs && rhs->getType()->isPointerTy()) {
             rhs = builder->CreateLoad(it->rhs->entity, rhs, "loadrhs");
         }
-
-
-//        // 类型提升：确保左右操作数类型一致
-//        if (lhs->getType() != rhs->getType()) {
-//            if (it->lhs->entity->isIntegerTy() && it->rhs->entity->isIntegerTy()) {
-//                // 整数提升：将较小的整数类型提升到较大的类型
-//                IntegerType* lhsInt = cast<IntegerType>(lhs->getType());
-//                IntegerType* rhsInt = cast<IntegerType>(rhs->getType());
-//                if (lhsInt->getBitWidth() > rhsInt->getBitWidth()) {
-//                    rhs = builder->CreateIntCast(rhs, lhs->getType(), true, "cast");
-//                } else {
-//                    lhs = builder->CreateIntCast(lhs, rhs->getType(), true, "cast");
-//                }
-//            } else {
-//                // 其他类型转换逻辑（例如整型转浮点等）
-//                // 这里简化为错误
-//                throw std::runtime_error("Type mismatch in binary operator");
-//            }
-//        }
 
         // 生成操作
         switch (it->opCode) {
@@ -1028,10 +894,6 @@ public:
             default:
                 throw std::runtime_error("Unsupported binary operator");
         }
-//        std::cerr << "[assign] binaryExprNode: ";
-//        if (it->addr) it->addr->print(llvm::errs());
-//        else std::cerr << "null";
-//        std::cerr << std::endl;
 		it->entity = it->lhs->entity;
 		it->isLeftVal = false;
     }
@@ -1150,24 +1012,6 @@ private:
         throw std::runtime_error("Unsupported type");
     }
 
-    // 创建函数类型
-//    FunctionType* createFunctionType(funcDefNode* func) {
-//        Type* retType = getType(func->typeName);
-//
-//        std::vector<Type*> paramTypes;
-//        for (auto& param : func->param) {
-//            paramTypes.push_back(getType(param->typeName));
-//        }
-//
-//        // 如果是类成员函数，添加this指针
-//        if (currentClass) {
-//            paramTypes.insert(paramTypes.begin(),
-//                PointerType::get(currentClass, 0));
-//        }
-//
-//        return FunctionType::get(retType, paramTypes, false);
-//    }
-
 	std::tuple<Value*, Type*> getObjectMember(Value* objPtr, Type* classType, const std::string& memberName) {
 		auto structType = static_cast<StructType *>(classType);
 		int index = getMemberIndex(structType, memberName);
@@ -1185,9 +1029,7 @@ private:
 
 		// 3. 准备参数列表
         for (auto& argExpr : it->args) {
-            pushContext(false, true); // 参数作为右值访问
             argExpr->accept((ASTVisitor&) *this);
-            popContext();
             Value* argVal = argExpr->addr; // 获取参数值
 			Type* argType = argExpr->entity;
 
@@ -1326,48 +1168,4 @@ private:
         Value* ptr = node->addr;
         builder->CreateStore(value, ptr);
     }
-
-private:
-    // 循环信息结构
-    struct LoopInfo {
-        BasicBlock* endBlock;
-        BasicBlock* continueBlock;
-    };
-    std::vector<LoopInfo> loopStack;
-
-    void pushLoop(BasicBlock* endBlock, BasicBlock* continueBlock) {
-        loopStack.push_back({endBlock, continueBlock});
-    }
-
-    void popLoop() {
-        if (!loopStack.empty()) {
-            loopStack.pop_back();
-        }
-    }
-
-    Value* createCast(Value* value, Type* targetType, const std::string& name = "") {
-        if (value->getType() == targetType) {
-            return value;
-        }
-
-        // 整型类型转换
-        if (targetType->isIntegerTy() && value->getType()->isIntegerTy()) {
-            return builder->CreateIntCast(value, targetType, true, name);
-        }
-
-        // 指针转换
-        if (targetType->isPointerTy() && value->getType()->isPointerTy()) {
-            return builder->CreateBitCast(value, targetType, name);
-        }
-
-        // 整型到布尔类型
-        if (targetType->isIntegerTy(1) && value->getType()->isIntegerTy()) {
-            Value* zero = ConstantInt::get(value->getType(), 0);
-            return builder->CreateICmpNE(value, zero, name);
-        }
-
-        // 其他转换处理...
-        throw std::runtime_error("Unsupported cast");
-    }
-
 };
