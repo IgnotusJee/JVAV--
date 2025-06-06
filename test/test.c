@@ -6,12 +6,18 @@ int n;
 int main() {
     n = getInt();
     
-    // for循环输出 1 ~ n
     int i;
-    for (i = 1; i <= n; i++) {
-        printInt(i);
-        print(" ");
+    
+    // while 循环输出 n 的阶乘
+    int factorial;
+    factorial = 1;
+    i = 1;
+    while (i <= n) {
+        factorial = factorial * i;
+        i++;
     }
+    
+    printInt(factorial);
     
     return 0;
 }

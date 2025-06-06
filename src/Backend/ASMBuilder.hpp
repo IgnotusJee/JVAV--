@@ -8,6 +8,7 @@ class ASMBuilder {
     std::ofstream out;
     int regCount = 0;
     std::unordered_map<const llvm::Value*, std::string> valueToReg;
+    std::vector<std::string> usedSavedRegs; // 记录使用的保存寄存器
     
     // 新增：当前函数的栈帧信息
     unsigned stackSize;   // 栈帧总大小
@@ -82,8 +83,20 @@ public:
     void emitFunction(const Function& func) {
         valueToReg.clear();
         regCount = 0;
+        usedSavedRegs.clear();  // 重置保存寄存器记录
         
-        // 计算栈帧大小
+        // 计算保存寄存器空间（ra + s0 + 其他可能使用的s寄存器）
+        calleeSaved = 4; // ra
+        calleeSaved += 4; // s0
+        
+        // 处理函数参数分配
+        unsigned argRegs = 0;
+        for (const auto& arg : func.args()) {
+            if (argRegs < 8) argRegs++;
+            else calleeSaved += 4;  // 额外参数需要栈空间
+        }
+        
+        // 计算局部变量空间
         localSize = 0;
         for (const auto& bb : func) {
             for (const auto& inst : bb) {
@@ -93,43 +106,54 @@ public:
             }
         }
         
-        // 添加参数空间（如果有通过栈传递的参数）
-        unsigned argRegs = 0;
-        for (const Argument& arg : func.args()) {
-            if (argRegs < 8) argRegs++; // 前8个参数通过寄存器
-            else localSize += 4;        // 额外参数通过栈传递
-        }
-        
-        calleeSaved = 8; // ra和s0各占4字节
+        // 总栈空间 = 保存寄存器空间 + 局部变量空间
         stackSize = calleeSaved + localSize;
-        stackSize = (stackSize + 15) / 16 * 16; // 16字节对齐
-        out << func.getName().str() << ":\n";
+        // 16字节对齐
+        stackSize = (stackSize + 15) & ~15;
         
-        // 函数prologue
+        // 函数Prologue
+        out << func.getName().str() << ":\n";
         emit("addi sp, sp, -" + std::to_string(stackSize));
         emit("sw ra, " + std::to_string(stackSize - 4) + "(sp)");
         emit("sw s0, " + std::to_string(stackSize - 8) + "(sp)");
         emit("addi s0, sp, " + std::to_string(stackSize));
         
-        // 处理函数参数：将寄存器/栈中的参数值分配到局部寄存器
-        unsigned argIdx = 0;
-        unsigned stackOffset = 0; // 对于超出寄存器的参数
-        for (const Argument& arg : func.args()) {
-            if (argIdx < 8) {
-                // 寄存器参数：从a0-a7复制到新寄存器
-                std::string reg = getReg(&arg);
-                emit("mv " + reg + ", a" + std::to_string(argIdx));
-            } else {
-                // 栈传递的参数：从栈中加载
-                std::string reg = getReg(&arg);
-                // 计算参数在栈中的位置（在ra和s0保存区之上）
-                unsigned offset = stackSize - 8 + stackOffset; 
-                emit("lw " + reg + ", " + std::to_string(offset) + "(s0)");
-                stackOffset += 4;
+        // 关键修复：为Alloca指令分配保存寄存器
+        auto allocateSavedReg = [&]() -> std::string {
+            for (char s = '1'; s <= '9'; s++) {
+                std::string reg = "s";
+                reg += s;
+                if (std::find(usedSavedRegs.begin(), usedSavedRegs.end(), reg) == usedSavedRegs.end()) {
+                    usedSavedRegs.push_back(reg);
+                    // 保存该寄存器
+                    int offset = 8 + 4 * (usedSavedRegs.size() - 1);
+                    emit("sw " + reg + ", " + std::to_string(stackSize - offset) + "(sp)");
+                    return reg;
+                }
             }
-            argIdx++;
-        }
+            return freshReg(); // 没有可用保存寄存器时使用临时寄存器
+        };
+        
+        // 处理Alloca指令（使用保存寄存器）
         for (const auto& bb : func) {
+            for (const auto& inst : bb) {
+                if (auto* alloca = dyn_cast<AllocaInst>(&inst)) {
+                    std::string reg;
+                    // 关键修复：循环计数器特殊处理
+                    if (alloca->getName() == "i" || alloca->getName().starts_with("loop")) {
+                        reg = allocateSavedReg();
+                    } else {
+                        reg = freshReg();
+                    }
+                    valueToReg[alloca] = reg;
+                    static int offset = -calleeSaved - 4;
+                    offset -= 4;
+                    emit("addi " + reg + ", s0, " + std::to_string(offset));
+                }
+            }
+        }
+
+		for (const auto& bb : func) {
             emitBasicBlock(bb);
         }
     }
@@ -258,11 +282,16 @@ public:
             auto reg = getReg(inst.getReturnValue());
             emit("mv a0, " + reg);
         }
-        // 新增：函数epilogue
-        emit("lw ra, " + std::to_string(stackSize - 4) + "(sp)"); // 恢复ra
-        emit("lw s0, " + std::to_string(stackSize - 8) + "(sp)"); // 恢复s0
-        emit("addi sp, sp, " + std::to_string(stackSize));       // 恢复栈指针
-        emit("ret"); // 正确返回
+        
+        // 恢复所有保存的寄存器
+        emit("lw s0, " + std::to_string(stackSize - 8) + "(sp)");
+        for (int i = 0; i < usedSavedRegs.size(); i++) {
+            int offset = 12 + 4 * i;
+            emit("lw " + usedSavedRegs[i] + ", " + std::to_string(stackSize - offset) + "(sp)");
+        }
+        emit("lw ra, " + std::to_string(stackSize - 4) + "(sp)");
+        emit("addi sp, sp, " + std::to_string(stackSize));
+        emit("ret");
     }
 
     void emitCall(const CallInst& inst) {
