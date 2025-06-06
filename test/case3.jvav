@@ -22,9 +22,10 @@ int main() {
         print("odd\n");
     }
     
-    // for循环输出 1 ~ n
     int i;
+    // for循环输出 1 ~ n
     for (i = 1; i <= n; i++) {
+        print("enter\n");
         printInt(i);
         print(" ");
     }

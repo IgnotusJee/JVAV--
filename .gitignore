@@ -9,3 +9,4 @@ Mx-Compiler
 *.ll
 *.s
 out
+riscv-gnu-toolchain

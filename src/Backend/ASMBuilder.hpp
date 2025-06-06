@@ -65,41 +65,44 @@ public:
         out << "\t" << line << "\n";
     }
 
+    int tempRegCount = 0; 
+    int savedRegCount = 0;
+
     std::string freshReg(const std::string& type = "temp") {
         if (type == "saved") {
-            // 分配保存寄存器 (s1-s11)
-            if (usedSavedRegs.size() < 11) {
-                std::string reg = "s" + std::to_string(usedSavedRegs.size() + 1);
-                usedSavedRegs.push_back(reg);
+            if (savedRegCount < 11) {
+                std::string reg = "s" + std::to_string(savedRegCount + 1);
+                savedRegCount++;
                 return reg;
+            } else {
+                std::cerr << "[Error] Out of saved registers for alloca!\n";
+                exit(1);
             }
         }
-        // 默认分配临时寄存器 (t0-t6)
-        std::string reg = "t" + std::to_string(regCount % 7);
-        regCount++;
+
+        std::string reg = "t" + std::to_string(tempRegCount % 7);
+        tempRegCount++;
         return reg;
     }
 
     std::string getReg(const Value* val) {
-        // 常量值特殊处理
         if (isa<ConstantInt>(val)) {
             auto* ci = cast<ConstantInt>(val);
             std::string reg = freshReg();
             emit("li " + reg + ", " + std::to_string(ci->getSExtValue()));
             return reg;
         }
-        
-        // 全局变量特殊处理
+
         if (isa<GlobalVariable>(val)) {
             std::string reg = freshReg();
             emit("la " + reg + ", " + val->getName().str());
             return reg;
         }
-        
-        // 已分配寄存器直接返回
-        if (valueToReg.count(val)) return valueToReg[val];
-        
-        // 分配新寄存器
+
+        if (valueToReg.count(val)) {
+            return valueToReg[val];
+        }
+
         std::string reg = freshReg();
         valueToReg[val] = reg;
         return reg;
