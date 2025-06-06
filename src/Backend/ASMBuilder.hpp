@@ -9,10 +9,10 @@ class ASMBuilder {
     int regCount = 0;
     std::unordered_map<const llvm::Value*, std::string> valueToReg;
     
-    unsigned stackSize;
-    unsigned calleeSaved;
-    unsigned localSize;
-    int nextParamOffset; // 用于追踪栈传递参数的偏移量
+    // 新增：当前函数的栈帧信息
+    unsigned stackSize;   // 栈帧总大小
+    unsigned calleeSaved; // 保存的寄存器数量
+    unsigned localSize;   // 局部变量总大小
 
 public:
     ASMBuilder(Module* m) : module(m) {}
@@ -83,26 +83,26 @@ public:
         valueToReg.clear();
         regCount = 0;
         
-        // 计算局部变量空间
+        // 计算栈帧大小
         localSize = 0;
         for (const auto& bb : func) {
             for (const auto& inst : bb) {
                 if (isa<AllocaInst>(&inst)) {
-                    localSize += 4; // 每个alloca分配4字节
+                    localSize += 4;
                 }
             }
         }
         
-        // 计算栈传递参数的空间（超过8个参数的情况）
-        int numParams = func.arg_size();
-        int stackParamSpace = (numParams > 8) ? (numParams - 8) * 4 : 0;
+        // 添加参数空间（如果有通过栈传递的参数）
+        unsigned argRegs = 0;
+        for (const Argument& arg : func.args()) {
+            if (argRegs < 8) argRegs++; // 前8个参数通过寄存器
+            else localSize += 4;        // 额外参数通过栈传递
+        }
         
         calleeSaved = 8; // ra和s0各占4字节
-        stackSize = calleeSaved + localSize + stackParamSpace;
+        stackSize = calleeSaved + localSize;
         stackSize = (stackSize + 15) / 16 * 16; // 16字节对齐
-
-        nextParamOffset = stackSize - 8; // 栈传递参数的起始位置（在保存区之上）
-
         out << func.getName().str() << ":\n";
         
         // 函数prologue
@@ -111,23 +111,24 @@ public:
         emit("sw s0, " + std::to_string(stackSize - 8) + "(sp)");
         emit("addi s0, sp, " + std::to_string(stackSize));
         
-        // 正确获取函数参数
-        int paramCount = 0;
+        // 处理函数参数：将寄存器/栈中的参数值分配到局部寄存器
+        unsigned argIdx = 0;
+        unsigned stackOffset = 0; // 对于超出寄存器的参数
         for (const Argument& arg : func.args()) {
-            std::string reg = freshReg();
-            valueToReg[&arg] = reg;
-            
-            if (paramCount < 8) {
-                // 前8个参数从a0-a7寄存器获取
-                emit("mv " + reg + ", a" + std::to_string(paramCount));
+            if (argIdx < 8) {
+                // 寄存器参数：从a0-a7复制到新寄存器
+                std::string reg = getReg(&arg);
+                emit("mv " + reg + ", a" + std::to_string(argIdx));
             } else {
-                // 第9个及以后的参数从栈上获取
-                int offset = nextParamOffset + (paramCount - 8) * 4;
+                // 栈传递的参数：从栈中加载
+                std::string reg = getReg(&arg);
+                // 计算参数在栈中的位置（在ra和s0保存区之上）
+                unsigned offset = stackSize - 8 + stackOffset; 
                 emit("lw " + reg + ", " + std::to_string(offset) + "(s0)");
+                stackOffset += 4;
             }
-            paramCount++;
+            argIdx++;
         }
-
         for (const auto& bb : func) {
             emitBasicBlock(bb);
         }
@@ -232,9 +233,11 @@ public:
     }
 
     void emitAlloca(const AllocaInst& inst) {
-        static int offset = -calleeSaved - 4;
-        offset -= 4;
+        // 修改：直接计算偏移地址，不再动态调整sp
         auto reg = getReg(&inst);
+        // 局部变量在栈帧中的偏移：从s0向下计算
+        static int offset = -calleeSaved - 4; // 从calleeSaved区域后开始
+        offset -= 4;
         emit("addi " + reg + ", s0, " + std::to_string(offset));
     }
 
@@ -255,40 +258,19 @@ public:
             auto reg = getReg(inst.getReturnValue());
             emit("mv a0, " + reg);
         }
-        emit("lw ra, " + std::to_string(stackSize - 4) + "(sp)");
-        emit("lw s0, " + std::to_string(stackSize - 8) + "(sp)");
-        emit("addi sp, sp, " + std::to_string(stackSize));
-        emit("ret");
+        // 新增：函数epilogue
+        emit("lw ra, " + std::to_string(stackSize - 4) + "(sp)"); // 恢复ra
+        emit("lw s0, " + std::to_string(stackSize - 8) + "(sp)"); // 恢复s0
+        emit("addi sp, sp, " + std::to_string(stackSize));       // 恢复栈指针
+        emit("ret"); // 正确返回
     }
 
     void emitCall(const CallInst& inst) {
-        // 保存可能被破坏的临时寄存器（简单实现）
-        emit("# Save temporary registers");
-        int savedRegs = 0;
-        std::vector<std::string> saved;
-        for (int i = 0; i < 7; i++) {
-            std::string reg = "t" + std::to_string(i);
-            emit("sw " + reg + ", " + std::to_string(i * 4) + "(sp)");
-            saved.push_back(reg);
-            savedRegs++;
-        }
-        
-        // 传递参数
         for (unsigned i = 0; i < inst.arg_size(); ++i) {
             auto reg = getReg(inst.getArgOperand(i));
             emit("mv a" + std::to_string(i) + ", " + reg);
         }
-        
-        // 调用函数
         emit("call " + inst.getCalledFunction()->getName().str());
-        
-        // 恢复临时寄存器
-        emit("# Restore temporary registers");
-        for (int i = savedRegs - 1; i >= 0; i--) {
-            emit("lw " + saved[i] + ", " + std::to_string(i * 4) + "(sp)");
-        }
-        
-        // 处理返回值
         if (!inst.getType()->isVoidTy()) {
             auto dst = getReg(&inst);
             emit("mv " + dst + ", a0");
