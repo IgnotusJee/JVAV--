@@ -1,6 +1,5 @@
 #include "AST/ASTVisitor.h"
 #include "AST/ASTCollection.h"
-#include "Tools/error.hpp"
 #include "Frontend/SymbolTable.hpp"
 
 #include <llvm/IR/LLVMContext.h>
