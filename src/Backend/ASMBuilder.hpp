@@ -301,8 +301,11 @@ public:
                 emit("add " + dst + ", " + ptr + ", " + idx);
                 break;
             }
+			case Instruction::ZExt:
+				emitZext(cast<ZExtInst>(inst)); break;
             default:
                 emit("# unhandled: " + std::string(inst.getOpcodeName()));
+				std::cerr << "Unsupported opcode name " << inst.getOpcodeName() << std::endl;
                 break;
         }
     }
@@ -317,6 +320,29 @@ public:
             emit("rem " + dst + ", " + lhs + ", " + rhs);
         } else {
             emit(op + " " + dst + ", " + lhs + ", " + rhs);
+        }
+    }
+
+	void emitZext(const ZExtInst& inst) {
+        const Value* src = inst.getOperand(0);
+        std::string srcReg = getReg(src);
+        std::string dstReg = getReg(&inst);
+
+        unsigned srcBits = src->getType()->getIntegerBitWidth();
+        unsigned destBits = inst.getType()->getIntegerBitWidth();
+
+        if (srcBits < destBits) {
+            if (srcBits <= 12) {
+                uint64_t mask = (1ULL << srcBits) - 1;
+                emit("andi " + dstReg + ", " + srcReg + ", " + std::to_string(mask));
+            } else {
+                std::string maskReg = freshReg();
+                uint64_t mask = (1ULL << srcBits) - 1;
+                emit("li " + maskReg + ", " + std::to_string(mask));
+                emit("and " + dstReg + ", " + srcReg + ", " + maskReg);
+            }
+        } else {
+            emit("mv " + dstReg + ", " + srcReg);
         }
     }
 

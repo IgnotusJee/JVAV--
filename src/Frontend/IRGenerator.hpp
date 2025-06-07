@@ -62,6 +62,12 @@ class IRGenerator : public ASTVisitor {
     StructType* currentClass = nullptr;
     Value* thisPtr = nullptr;
 
+	int forNum = 0, whileNum = 0;
+	int ifNum = 0, ifCondNum = 0, ifThenNum = 0;
+	int tenNum = 0;
+
+	int strCnt = 0;
+
 public:
     explicit IRGenerator(const std::string& moduleName = "jvav_module")
         : context(std::make_unique<LLVMContext>()),
@@ -207,6 +213,8 @@ public:
     void visit(varDefStmtNode *it) override {
 		// 获取当前生成类型的 llvm 类型
         llvm::Type* varType = getType(it->typeName);
+		if(!varType)
+			throw std::runtime_error("Type not defined");
 
         for (auto& var : it->var) {
             auto* localVar = builder->CreateAlloca(
@@ -379,7 +387,7 @@ public:
 
     void visit(branchStmtNode *it) override {
         // 创建基本块
-        BasicBlock* mergeBB = BasicBlock::Create(*context, "if.merge", currentFunction);
+        BasicBlock* mergeBB = BasicBlock::Create(*context, "if.merge." + std::to_string(ifNum), currentFunction);
         std::vector<BasicBlock*> thenBlocks;
         std::vector<BasicBlock*> condBlocks;
 
@@ -387,12 +395,15 @@ public:
         for (size_t i = 0; i < it->cond.size(); i++) {
             // 条件块
             condBlocks.push_back(BasicBlock::Create(
-                *context, "if.cond." + std::to_string(i), currentFunction));
+                *context, "if.cond." + std::to_string(i + ifCondNum), currentFunction));
 
             // then块
             thenBlocks.push_back(BasicBlock::Create(
-                *context, "if.then." + std::to_string(i), currentFunction));
+                *context, "if.then." + std::to_string(i + ifThenNum), currentFunction));
         }
+
+		ifCondNum += it->cond.size();
+		ifThenNum += it->cond.size();
 
 		int elseBranch = it->Stmt.size() - it->cond.size();
 		if(elseBranch > 1)
@@ -400,7 +411,9 @@ public:
 
         // else块
         BasicBlock* elseBB = elseBranch ?
-            BasicBlock::Create(*context, "if.else", currentFunction) : mergeBB;
+            BasicBlock::Create(*context, "if.else." + std::to_string(ifNum), currentFunction) : mergeBB;
+
+		ifNum ++;
 
         // 初始跳转
         builder->CreateBr(condBlocks[0]);
@@ -447,9 +460,9 @@ public:
     void visit(whileStmtNode *it) override {
         // 创建基本块
         BasicBlock* condBB = BasicBlock::Create(
-            *context, "while.cond", currentFunction);
-        BasicBlock* bodyBB = BasicBlock::Create(*context, "while.body", currentFunction);
-        BasicBlock* endBB = BasicBlock::Create(*context, "while.end", currentFunction);
+            *context, "while.cond." + std::to_string(whileNum), currentFunction);
+        BasicBlock* bodyBB = BasicBlock::Create(*context, "while.body." + std::to_string(whileNum), currentFunction);
+        BasicBlock* endBB = BasicBlock::Create(*context, "while.end." + std::to_string(whileNum), currentFunction);
 
         // 保存控制流状态
         controlStack.push({condBB, endBB, condBB});
@@ -476,6 +489,7 @@ public:
         builder->SetInsertPoint(endBB);
 
         controlStack.pop();
+		whileNum ++;
     }
 
     void visit(forDefStmtNode *it) override {
@@ -488,10 +502,10 @@ public:
 
         // 创建基本块
         BasicBlock* condBB = BasicBlock::Create(
-            *context, "for.cond", currentFunction);
-        BasicBlock* bodyBB = BasicBlock::Create(*context, "for.body", currentFunction);
-        BasicBlock* stepBB = BasicBlock::Create(*context, "for.step", currentFunction);
-        BasicBlock* endBB = BasicBlock::Create(*context, "for.end", currentFunction);
+            *context, "for.cond." + std::to_string(forNum), currentFunction);
+        BasicBlock* bodyBB = BasicBlock::Create(*context, "for.body." + std::to_string(forNum), currentFunction);
+        BasicBlock* stepBB = BasicBlock::Create(*context, "for.step." + std::to_string(forNum), currentFunction);
+        BasicBlock* endBB = BasicBlock::Create(*context, "for.end." + std::to_string(forNum), currentFunction);
 
         // 初始跳转
         builder->CreateBr(condBB);
@@ -529,6 +543,7 @@ public:
 
         controlStack.pop();
         symbolTable.pop();  // 离开for作用域
+		forNum ++;
     }
 
     void visit(forExprStmtNode *it) override {
@@ -542,10 +557,10 @@ public:
 
         // 创建基本块
         BasicBlock* condBB = BasicBlock::Create(
-            *context, "for.cond", currentFunction);
-        BasicBlock* bodyBB = BasicBlock::Create(*context, "for.body", currentFunction);
-        BasicBlock* stepBB = BasicBlock::Create(*context, "for.step", currentFunction);
-        BasicBlock* endBB = BasicBlock::Create(*context, "for.end", currentFunction);
+            *context, "for.cond." + std::to_string(forNum), currentFunction);
+        BasicBlock* bodyBB = BasicBlock::Create(*context, "for.body." + std::to_string(forNum), currentFunction);
+        BasicBlock* stepBB = BasicBlock::Create(*context, "for.step." + std::to_string(forNum), currentFunction);
+        BasicBlock* endBB = BasicBlock::Create(*context, "for.end." + std::to_string(forNum), currentFunction);
 
         // 初始跳转
         builder->CreateBr(condBB);
@@ -583,6 +598,7 @@ public:
 
         controlStack.pop();
         symbolTable.pop();  // 离开for作用域
+		forNum ++;
     }
 
     void visit(breakStmtNode *it) override {
@@ -907,9 +923,10 @@ public:
 
         // 创建基本块
         Function* func = builder->GetInsertBlock()->getParent();
-        BasicBlock* thenBB = BasicBlock::Create(*context, "ternary.then", func);
-        BasicBlock* elseBB = BasicBlock::Create(*context, "ternary.else", func);
-        BasicBlock* mergeBB = BasicBlock::Create(*context, "ternary.merge", func);
+        BasicBlock* thenBB = BasicBlock::Create(*context, "ternary.then" + std::to_string(tenNum), func);
+        BasicBlock* elseBB = BasicBlock::Create(*context, "ternary.else" + std::to_string(tenNum), func);
+        BasicBlock* mergeBB = BasicBlock::Create(*context, "ternary.merge" + std::to_string(tenNum), func);
+		tenNum ++;
 
         builder->CreateCondBr(cond, thenBB, elseBB);
 
@@ -946,23 +963,24 @@ public:
 
     void visit(boolNode *it) override {
         it->addr = ConstantInt::get(Type::getInt1Ty(*context), it->val ? 1 : 0);
-		it->entity = it->addr->getType();
+		it->entity = Type::getInt1Ty(*context);
 		it->isLeftVal = false;
     }
 
     void visit(numberNode *it) override {
         // 假设整数类型
         it->addr = ConstantInt::get(Type::getInt32Ty(*context), it->val);
-		it->entity = it->addr->getType();
+		it->entity = Type::getInt32Ty(*context);
 		it->isLeftVal = false;
     }
 
     void visit(strNode *it) override {
         // 创建全局字符串常量
-        GlobalVariable* strConst = builder->CreateGlobalString(it->val, "str", 0, module.get());
+        GlobalVariable* strConst = builder->CreateGlobalString(it->val + "\0", "str." + std::to_string(strCnt ++), 0, module.get());
         it->addr = builder->CreateBitCast(strConst, PointerType::get(Type::getInt8Ty(*context), 0));
-		it->entity = it->addr->getType();
+		it->entity = PointerType::get(Type::getInt8Ty(*context), 0);
 		it->isLeftVal = false;
+		it->isArray = true;
     }
 
     void visit(nullNode *it) override {
@@ -1036,7 +1054,7 @@ private:
             // 类型检查与转换：确保传递的参数类型与函数期望的参数类型匹配。
             if (args.size() < func->getFunctionType()->getNumParams()) {
                 Type* expectedType = func->getFunctionType()->getParamType(args.size());
-				if(argVal->getType()->isPointerTy() && !argType->isPointerTy())
+				if((argVal->getType()->isPointerTy() && !argType->isPointerTy()) || argExpr->isLeftVal)
 					argVal = builder->CreateLoad(argType, argVal, "loadarg");
                 if (argVal->getType() != expectedType) {
                     argVal = createTypeCast(argVal, expectedType);
@@ -1105,7 +1123,7 @@ private:
 
          // 处理整数类型转换
 	    if (targetType->isIntegerTy() && fromType->isIntegerTy()) {
-	        return builder->CreateIntCast(val, targetType, true, "cast");
+	        return builder->CreateIntCast(val, targetType, false, "cast");
 	    }
 
 	    // 处理指针类型转换

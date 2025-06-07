@@ -1,3 +1,5 @@
+// test case for class
+
 class op {
     int val, ppp;
     op() {
@@ -5,16 +7,14 @@ class op {
     }
     void assign_and_print(int i) {
         val = i+2;
-        printIntln(i);
         printIntln(this.val);
     }
 };
 
 int main() {
-    op[] ooo = new op[2];
-    ooo[0].assign_and_print(123);
-    ooo[1].assign_and_print(555);
-    printIntln(ooo[0].val);
-    printIntln(ooo[1].val);
+    op ooo = new op;
+    ooo.assign_and_print(123);
+    ooo.ppp = 666;
+    printIntln(ooo.ppp);
     return 0;
 }
